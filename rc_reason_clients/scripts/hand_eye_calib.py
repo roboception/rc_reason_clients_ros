@@ -32,7 +32,7 @@ import rospy
 
 import sys
 
-from rc_reason_msgs.srv import HandEyeCalibration, HandEyeCalibrationRequest, HandEyeCalibrationResponse
+from rc_reason_msgs.srv import HandEyeCalibration, HandEyeCalibrationRequest
 from rc_reason_msgs.srv import HandEyeCalibrationTrigger
 from rc_reason_msgs.srv import SetHandEyeCalibration
 from rc_reason_msgs.srv import SetHandEyeCalibrationPose
@@ -45,63 +45,30 @@ class HandEyeCalibClient(RestClient):
     def __init__(self, host):
         super(HandEyeCalibClient, self).__init__('rc_hand_eye_calibration', host)
 
-        self.add_rest_service(HandEyeCalibration, 'calibrate', self.calibrate_cb)
-        self.add_rest_service(HandEyeCalibration, 'get_calibration', self.get_calib_cb)
-        self.add_rest_service(SetHandEyeCalibration, 'set_calibration', self.set_calib_cb)
-        self.add_rest_service(HandEyeCalibrationTrigger, 'save_calibration', self.save_calib_cb)
-        self.add_rest_service(HandEyeCalibrationTrigger, 'delete_calibration', self.delete_calib_cb)
-        self.add_rest_service(HandEyeCalibrationTrigger, 'reset_calibration', self.reset_calib_cb)
-        self.add_rest_service(SetHandEyeCalibrationPose, 'set_pose', self.set_pose_cb)
+        self.add_rest_service(HandEyeCalibration, 'calibrate', self.pub_cb)
+        self.add_rest_service(HandEyeCalibration, 'get_calibration', self.pub_cb)
+        self.add_rest_service(SetHandEyeCalibration, 'set_calibration', self.pub_cb)
+        self.add_rest_service(HandEyeCalibrationTrigger, 'save_calibration', self.generic_cb)
+        self.add_rest_service(HandEyeCalibrationTrigger, 'delete_calibration', self.generic_cb)
+        self.add_rest_service(HandEyeCalibrationTrigger, 'reset_calibration', self.generic_cb)
+        self.add_rest_service(SetHandEyeCalibrationPose, 'set_pose', self.generic_cb)
 
         # get initial calibration from sensor
-        self.get_calib_cb('get_calibration', HandEyeCalibration, HandEyeCalibrationRequest())
+        self.pub_cb('get_calibration', HandEyeCalibration, HandEyeCalibrationRequest())
 
-    def calibrate_cb(self, srv_name, srv_type, request):
+    def generic_cb(self, srv_name, srv_type, request):
+        response = self.call_rest_service(srv_name, srv_type, request)
+        if not response.success:
+            rospy.logwarn("service %s: %s", srv_name, response.message)
+        return response
+
+    def pub_cb(self, srv_name, srv_type, request):
+        """Handle service call and publish hand-eye-calib if successful"""
         response = self.call_rest_service(srv_name, srv_type, request)
         if response.success:
             self.pub_hand_eye(response.pose, response.robot_mounted)
         else:
-            rospy.logwarn(response.message)
-        return response
-
-    def get_calib_cb(self, srv_name, srv_type, request):
-        response = self.call_rest_service(srv_name, srv_type, request)
-        if response.success:
-            self.pub_hand_eye(response.pose, response.robot_mounted)
-        else:
-            rospy.logwarn(response.message)
-        return response
-
-    def set_calib_cb(self, srv_name, srv_type, request):
-        response = self.call_rest_service(srv_name, srv_type, request)
-        if response.success:
-            self.pub_hand_eye(request.pose, request.robot_mounted)
-        else:
-            rospy.logwarn(response.message)
-        return response
-
-    def save_calib_cb(self, srv_name, srv_type, request):
-        response = self.call_rest_service(srv_name, srv_type, request)
-        if not response.success:
-            rospy.logwarn(response.message)
-        return response
-
-    def delete_calib_cb(self, srv_name, srv_type, request):
-        response = self.call_rest_service(srv_name, srv_type, request)
-        if not response.success:
-            rospy.logwarn(response.message)
-        return response
-
-    def reset_calib_cb(self, srv_name, srv_type, request):
-        response = self.call_rest_service(srv_name, srv_type, request)
-        if not response.success:
-            rospy.logwarn(response.message)
-        return response
-
-    def set_pose_cb(self, srv_name, srv_type, request):
-        response = self.call_rest_service(srv_name, srv_type, request)
-        if not response.success:
-            rospy.logwarn(response.message)
+            rospy.logwarn("service %s: %s", srv_name, response.message)
         return response
 
     def pub_hand_eye(self, pose, robot_mounted):
