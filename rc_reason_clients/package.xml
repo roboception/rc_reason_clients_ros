@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>rc_reason_clients</name>
+  <version>0.0.0</version>
+  <description>Clients for interfacing with Roboception reason modules on rc_visard and rc_cube.</description>
+  <maintainer email="felix.ruess@roboception.de">Felix Ruess</maintainer>
+  <license>BSD</license>
+
+  <url type="repository">https://github.com/roboception/rc_reason_clients_ros</url>
+  <url type="bugtracker">https://github.com/roboception/rc_reason_clients_ros/issues</url>
+
+  <!-- system dependencies -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>python-requests</depend>
+
+  <depend>rospy</depend>
+  <depend>rc_reason_msgs</depend>
+
+  <doc_depend>doxygen</doc_depend>
+</package>
