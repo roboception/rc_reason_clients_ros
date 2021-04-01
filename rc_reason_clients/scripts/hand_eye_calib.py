@@ -32,6 +32,9 @@ import rospy
 
 import sys
 
+from tf2_msgs.msg import TFMessage
+from geometry_msgs.msg import TransformStamped
+
 from rc_reason_msgs.srv import HandEyeCalibration, HandEyeCalibrationRequest
 from rc_reason_msgs.srv import HandEyeCalibrationTrigger
 from rc_reason_msgs.srv import SetHandEyeCalibration
@@ -44,6 +47,12 @@ class HandEyeCalibClient(RestClient):
 
     def __init__(self, host):
         super(HandEyeCalibClient, self).__init__('rc_hand_eye_calibration', host)
+
+        self.camera_frame_id = rospy.get_param("~camera_frame_id", "camera")
+        self.end_effector_frame_id = rospy.get_param("~end_effector_frame_id", "end_effector")
+        self.base_frame_id = rospy.get_param("~base_frame_id", "base_link")
+
+        self.pub_tf = rospy.Publisher('/tf_static', TFMessage, latch=True)
 
         self.add_rest_service(HandEyeCalibration, 'calibrate', self.pub_cb)
         self.add_rest_service(HandEyeCalibration, 'get_calibration', self.pub_cb)
@@ -72,7 +81,19 @@ class HandEyeCalibClient(RestClient):
         return response
 
     def pub_hand_eye(self, pose, robot_mounted):
-        pass
+        transform = TransformStamped()
+        transform.transform.translation.x = pose.position.x
+        transform.transform.translation.y = pose.position.y
+        transform.transform.translation.z = pose.position.z
+        transform.transform.rotation = pose.orientation
+        transform.header.stamp = rospy.Time.now()
+        if robot_mounted:
+            transform.header.frame_id = self.end_effector_frame_id
+        else:
+            transform.header.frame_id = self.base_frame_id
+        transform.child_frame_id = self.camera_frame_id
+        rospy.loginfo("publishing hand-eye calibration from {} to {}".format(transform.header.frame_id, transform.child_frame_id))
+        self.pub_tf.publish(TFMessage(transforms=[transform]))
 
 
 def main():
