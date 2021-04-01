@@ -31,6 +31,7 @@ from functools import partial
 import rospy
 
 import json
+import sys
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -63,10 +64,16 @@ def requests_retry_session(retries=3,
 
 class RestClient(object):
 
-    def __init__(self, rest_name, host):
+    def __init__(self, rest_name):
         self.rest_name = rest_name
-        self.host = host
         self.rest_services = []
+
+        rospy.init_node(rest_name + '_client', log_level=rospy.DEBUG)
+
+        self.host = rospy.get_param('~host', '')
+        if not self.host:
+            rospy.logerr('host is not set')
+            sys.exit(1)
 
     def call_rest_service(self, name, srv_type, request=None):
         try:

@@ -30,8 +30,6 @@
 
 import rospy
 
-import sys
-
 from tf2_msgs.msg import TFMessage
 from geometry_msgs.msg import TransformStamped
 
@@ -45,8 +43,8 @@ from rest_client import RestClient
 
 class HandEyeCalibClient(RestClient):
 
-    def __init__(self, host):
-        super(HandEyeCalibClient, self).__init__('rc_hand_eye_calibration', host)
+    def __init__(self):
+        super(HandEyeCalibClient, self).__init__('rc_hand_eye_calibration')
 
         self.camera_frame_id = rospy.get_param("~camera_frame_id", "camera")
         self.end_effector_frame_id = rospy.get_param("~end_effector_frame_id", "end_effector")
@@ -97,14 +95,7 @@ class HandEyeCalibClient(RestClient):
 
 
 def main():
-    rospy.init_node('hand_eye_calib_client', log_level=rospy.DEBUG)
-
-    host = rospy.get_param('~host', '')
-    if not host:
-        rospy.logerr('host is not set')
-        sys.exit(1)
-
-    client = HandEyeCalibClient(host)
+    client = HandEyeCalibClient()
 
     try:
         rospy.spin()
