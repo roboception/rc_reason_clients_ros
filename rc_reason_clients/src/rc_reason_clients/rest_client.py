@@ -152,7 +152,7 @@ class RestClient(object):
                 config[p['name']] = p['value']
         return config
 
-    def call_rest_service(self, name, srv_type, request=None):
+    def call_rest_service(self, name, srv_type=None, request=None):
         try:
             args = {}
             if request is not None:
@@ -170,13 +170,17 @@ class RestClient(object):
                 rospy.logwarn("service {} returned an error: [{}] {}", name, rc['value'], rc['message'])
 
             # convert to ROS response
-            response = convert_dictionary_to_ros_message(srv_type._response_class(), j['response'])
+            if srv_type is not None:
+                response = convert_dictionary_to_ros_message(srv_type._response_class(), j['response'])
+            else:
+                response = j['response']
         except Exception as e:
             rospy.logerr(str(e))
-            response = srv_type._response_class()
-            if hasattr(response, 'return_code'):
-                response.return_code.value = -1000
-                response.return_code.message = str(e)
+            if srv_type is not None:
+                response = srv_type._response_class()
+                if hasattr(response, 'return_code'):
+                    response.return_code.value = -1000
+                    response.return_code.message = str(e)
         return response
 
     def add_rest_service(self, srv_type, srv_name, callback):

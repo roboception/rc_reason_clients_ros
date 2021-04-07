@@ -18,5 +18,7 @@
   <depend>rc_reason_msgs</depend>
   <depend>ddynamic_reconfigure_python</depend>
 
+  <test_depend>python-pytest</test_depend>
+
   <doc_depend>doxygen</doc_depend>
 </package>

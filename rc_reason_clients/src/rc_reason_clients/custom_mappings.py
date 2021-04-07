@@ -30,11 +30,13 @@ import copy
 
 
 def map_ros2api(msg, rostype):
-    """ Map a ROS msg to API """
+    """ Map a ROS msg dict to API """
+    if not isinstance(msg, dict):
+        raise ValueError("msg is not a dict: {}".format(msg))
     if rostype == 'shape_msgs/Plane':
         c = msg['coef']
         return {'normal': {'x': c[0], 'y': c[1], 'z': c[2]}, 'distance': c[3]}
-    elif rostype == 'rc_reason_msgs/CalibrateBasePlane_Request':
+    elif rostype == 'rc_reason_msgs/CalibrateBasePlaneRequest':
         new_msg = copy.deepcopy(msg)
         if msg['plane_estimation_method'] == 'STEREO':
             new_msg['stereo'] = {'plane_preference': msg['stereo_plane_preference']}
@@ -47,14 +49,14 @@ def map_ros2api(msg, rostype):
         new_msg['pose'] = msg['pose']['pose']
         new_msg['pose_frame'] = msg['pose']['header']['frame_id']
         return new_msg
-    elif rostype in ['rc_reason_msgs/DetectLoadCarriers_Request', 'rc_reason_msgs/DetectFillingLevel_Request',
-                     'rc_reason_msgs/DetectTags_Request']:
+    elif rostype in ['rc_reason_msgs/DetectLoadCarriersRequest', 'rc_reason_msgs/DetectFillingLevelRequest',
+                     'rc_reason_msgs/DetectTagsRequest']:
         new_msg = copy.deepcopy(msg)
         # don't send robot pose if not external
         if msg['pose_frame'] != 'external':
             del new_msg['robot_pose']
         return new_msg
-    elif rostype in ['rc_reason_msgs/ComputeGrasps_Request']:
+    elif rostype in ['rc_reason_msgs/ComputeGraspsRequest']:
         new_msg = {k: msg[k] for k in ['pose_frame', 'item_models', 'suction_surface_length', 'suction_surface_width']}
         # only send robot pose if external
         if msg['pose_frame'] == 'external':
@@ -68,7 +70,7 @@ def map_ros2api(msg, rostype):
         if msg['collision_detection']['gripper_id']:
             new_msg['collision_detection'] = msg['collision_detection']
         return new_msg
-    elif rostype in ['rc_reason_msgs/DetectItems_Request']:
+    elif rostype in ['rc_reason_msgs/DetectItemsRequest']:
         new_msg = {k: msg[k] for k in ['pose_frame', 'item_models']}
         # only send robot pose if external
         if msg['pose_frame'] == 'external':
@@ -90,7 +92,7 @@ def map_ros2api(msg, rostype):
             new_msg['type'] = 'SPHERE'
             new_msg['sphere'] = {'radius': d[0]}
         return new_msg
-    elif rostype in ['rc_reason_msgs/SetLoadCarrier_Request']:
+    elif rostype in ['rc_reason_msgs/SetLoadCarrierRequest']:
         new_msg = copy.deepcopy(msg)
         # don't send pose (as prior) if frame_id is not set
         if not msg['load_carrier']['pose_frame']:
@@ -118,6 +120,8 @@ def _to_ros_pose_stamped(msg, timestamp=None):
 
 def map_api2ros(msg, rostype):
     """ Map an API msg to ROS """
+    if not isinstance(msg, dict):
+        raise ValueError("msg is not a dict: {}".format(msg))
     if rostype == 'rc_reason_msgs/DetectedTag':
         new_msg = {}
         header = {'stamp': msg['timestamp'], 'frame_id': msg['pose_frame']}
@@ -128,17 +132,17 @@ def map_api2ros(msg, rostype):
         return new_msg
     elif rostype == 'shape_msgs/Plane':
         return {'coef': [msg['normal']['x'], msg['normal']['y'], msg['normal']['z'], msg['distance']]}
-    elif rostype in ['rc_reason_msgs/GetBasePlaneCalibration_Response', 'rc_reason_msgs/CalibrateBasePlane_Response']:
+    elif rostype in ['rc_reason_msgs/GetBasePlaneCalibrationResponse', 'rc_reason_msgs/CalibrateBasePlaneResponse']:
         new_msg = copy.deepcopy(msg)
         new_msg['pose_frame'] = msg['plane']['pose_frame']
         del new_msg['plane']['pose_frame']
         return new_msg
     elif rostype in ['rc_reason_msgs/LoadCarrier']:
         return _to_ros_pose_stamped(msg)
-    elif rostype in ['rc_reason_msgs/ComputeGrasps_Response',
-                     'rc_reason_msgs/DetectFillingLevel_Response',
-                     'rc_reason_msgs/DetectLoadCarriers_Response',
-                     'rc_reason_msgs/DetectItems_Response']:
+    elif rostype in ['rc_reason_msgs/ComputeGraspsResponse',
+                     'rc_reason_msgs/DetectFillingLevelResponse',
+                     'rc_reason_msgs/DetectLoadCarriersResponse',
+                     'rc_reason_msgs/DetectItemsResponse']:
         new_msg = {k: v for k, v in msg.items() if k not in ['load_carriers']}
         new_msg['load_carriers'] = []
         for lc in msg['load_carriers']:

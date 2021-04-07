@@ -37,6 +37,9 @@ import genpy
 import re
 import base64
 import sys
+
+from custom_mappings import map_api2ros, map_ros2api
+
 python3 = True if sys.hexversion > 0x03000000 else False
 python_to_ros_type_map = {
     'bool'    : ['bool'],
@@ -101,6 +104,7 @@ def convert_dictionary_to_ros_message(message_type, dictionary, kind='message'):
     """
     if hasattr(message_type, '_type'):
         message = message_type
+        message_type = message._type
     elif type(message_type) in python_string_types:
         if kind == 'message':
             message_class = roslib.message.get_message_class(message_type)
@@ -115,9 +119,12 @@ def convert_dictionary_to_ros_message(message_type, dictionary, kind='message'):
             raise ValueError('Unknown kind "%s".' % kind)
     else:
         raise ValueError('message_type is not a ROS message instance nor a type')
-    message_fields = dict(_get_message_fields(message))
 
-    for field_name, field_value in dictionary.items():
+    # do our custom mappings if required
+    mapped_dict = map_api2ros(dictionary, message_type)
+
+    message_fields = dict(_get_message_fields(message))
+    for field_name, field_value in mapped_dict.items():
         if field_name in message_fields:
             field_type = message_fields[field_name]
             field_value = _convert_to_ros_type(field_type, field_value)
@@ -194,7 +201,7 @@ def convert_ros_message_to_dictionary(message):
         field_value = getattr(message, field_name)
         dictionary[field_name] = _convert_from_ros_type(field_type, field_value)
 
-    return dictionary
+    return map_ros2api(dictionary, message._type)
 
 def convert_ros_message_to_type_dictionary(message):
     """
