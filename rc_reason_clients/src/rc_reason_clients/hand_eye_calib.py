@@ -50,7 +50,7 @@ class HandEyeCalibClient(RestClient):
         self.end_effector_frame_id = rospy.get_param("~end_effector_frame_id", "end_effector")
         self.base_frame_id = rospy.get_param("~base_frame_id", "base_link")
 
-        self.pub_tf = rospy.Publisher('/tf_static', TFMessage, latch=True)
+        self.pub_tf = rospy.Publisher('/tf_static', TFMessage, queue_size=1, latch=True)
 
         self.add_rest_service(HandEyeCalibration, 'calibrate', self.pub_cb)
         self.add_rest_service(HandEyeCalibration, 'get_calibration', self.pub_cb)
