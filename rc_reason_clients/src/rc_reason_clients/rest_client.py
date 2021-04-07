@@ -31,11 +31,14 @@ from functools import partial
 import rospy
 
 import json
+import re
 import sys
 
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+
+from ddynamic_reconfigure_python.ddynamic_reconfigure import DDynamicReconfigure
 
 from message_converter import convert_dictionary_to_ros_message, convert_ros_message_to_dictionary
 
@@ -67,6 +70,7 @@ class RestClient(object):
     def __init__(self, rest_name):
         self.rest_name = rest_name
         self.rest_services = []
+        self.ddr = None
 
         rospy.init_node(rest_name + '_client', log_level=rospy.DEBUG)
 
@@ -74,6 +78,79 @@ class RestClient(object):
         if not self.host:
             rospy.logerr('host is not set')
             sys.exit(1)
+
+        self._setup_ddr()
+
+    def _get_rest_parameters(self):
+        try:
+            url = 'http://{}/api/v1/nodes/{}/parameters'.format(self.host, self.rest_name)
+            res = requests_retry_session().get(url)
+            if res.status_code != 200:
+                rospy.logerr("Getting parameters failed with status code: %d", res.status_code)
+                return []
+            return res.json()
+        except Exception as e:
+            rospy.logerr(str(e))
+            return []
+
+    def _set_rest_parameters(self, parameters):
+        try:
+            url = 'http://{}/api/v1/nodes/{}/parameters'.format(self.host, self.rest_name)
+            res = requests_retry_session().put(url, json=parameters)
+            j = res.json()
+            rospy.logdebug("set parameters response: %s", json.dumps(j, indent=2))
+            if 'return_code' in j and j['return_code']['value'] != 0:
+                rospy.logwarn("Setting parameter failed: %s", j['return_code']['message'])
+                return []
+            if res.status_code != 200:
+                rospy.logerr("Setting parameters failed with status code: %d", res.status_code)
+                return []
+            return j
+        except Exception as e:
+            rospy.logerr(str(e))
+            return []
+
+    def _setup_ddr(self):
+        self.ddr = DDynamicReconfigure(rospy.get_name())
+        rest_params = self._get_rest_parameters()
+
+        def enum_method_from_param(p):
+            if p['type'] != 'string':
+                return ""
+            enum_matches = re.findall(r'.*\[(?P<enum>.+)\].*', p['description'])
+            if not enum_matches:
+                return ""
+            enum_names = [str(e.strip()) for e in enum_matches[0].split(',')]
+            enum_list = [self.ddr.const(n, 'str', n, n) for n in enum_names]
+            return self.ddr.enum(enum_list, p['name'] + '_enum')
+
+        for p in rest_params:
+            level = 0
+            edit_method = enum_method_from_param(p)
+            if p['type'] == 'int32':
+                self.ddr.add(p['name'], 'int', level, p['description'], p['default'], p['min'], p['max'])
+            elif p['type'] == 'float64':
+                self.ddr.add(p['name'], 'double', level, p['description'], p['default'], p['min'], p['max'])
+            elif p['type'] == 'string':
+                self.ddr.add(p['name'], 'str', level, p['description'], str(p['default']), edit_method=edit_method)
+            elif p['type'] == 'bool':
+                self.ddr.add(p['name'], 'bool', level, p['description'], p['default'])
+            else:
+                rospy.logwarn("Unsupported parameter type: %s", p['type'])
+
+        self.ddr.start(self._dyn_rec_callback)
+
+    def _dyn_rec_callback(self, config, level):
+        rospy.logdebug("Received reconf call: " + str(config))
+        new_rest_params = [{'name': n, 'value': config[n]} for n in self.ddr.get_variable_names() if n in config]
+        if new_rest_params:
+            returned_params = self._set_rest_parameters(new_rest_params)
+            for p in returned_params:
+                if p['name'] not in config:
+                    rospy.logerr("param %s not in config", p['name'])
+                    continue
+                config[p['name']] = p['value']
+        return config
 
     def call_rest_service(self, name, srv_type, request=None):
         try:
@@ -101,35 +178,6 @@ class RestClient(object):
                 response.return_code.value = -1000
                 response.return_code.message = str(e)
         return response
-
-    def get_rest_parameters(self):
-        try:
-            url = 'http://{}/api/v1/nodes/{}/parameters'.format(self.host, self.rest_name)
-            res = requests_retry_session().get(url)
-            if res.status_code != 200:
-                rospy.logerr("Getting parameters failed with status code: %d", res.status_code)
-                return []
-            return res.json()
-        except Exception as e:
-            rospy.logerr(str(e))
-            return []
-
-    def set_rest_parameters(self, parameters):
-        try:
-            url = 'http://{}/api/v1/nodes/{}/parameters'.format(self.host, self.rest_name)
-            res = requests_retry_session().put(url, json=parameters)
-            j = res.json()
-            rospy.logdebug("set parameters response: %s", json.dumps(j, indent=2))
-            if 'return_code' in j and j['return_code']['value'] != 0:
-                rospy.logwarn("Setting parameter failed: %s", j['return_code']['message'])
-                return False
-            if res.status_code != 200:
-                rospy.logerr("Setting parameters failed with status code: %d", res.status_code)
-                return False
-            return True
-        except Exception as e:
-            rospy.logerr(str(e))
-            return False
 
     def add_rest_service(self, srv_type, srv_name, callback):
         """create a service and inject the REST-API service name"""

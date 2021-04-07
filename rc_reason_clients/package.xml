@@ -16,6 +16,7 @@
 
   <depend>rospy</depend>
   <depend>rc_reason_msgs</depend>
+  <depend>ddynamic_reconfigure_python</depend>
 
   <doc_depend>doxygen</doc_depend>
 </package>
