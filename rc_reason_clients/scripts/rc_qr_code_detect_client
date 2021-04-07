@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+
+import rc_reason_clients.tagdetect
+
+
+if __name__ == '__main__':
+    rc_reason_clients.tagdetect.rc_qr_code_detect_client()

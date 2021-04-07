@@ -15,6 +15,7 @@
   <depend>python-requests</depend>
 
   <depend>rospy</depend>
+  <depend>message_runtime</depend>
   <depend>rc_reason_msgs</depend>
   <depend>ddynamic_reconfigure_python</depend>
 

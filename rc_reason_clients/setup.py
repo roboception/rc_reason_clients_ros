@@ -7,7 +7,9 @@ from catkin_pkg.python_setup import generate_distutils_setup
 setup_args = generate_distutils_setup(
     packages=['rc_reason_clients'],
     package_dir={'': 'src'},
-    requires=['rospy']
+    scripts=['scripts/rc_hand_eye_calibration_client',
+             'scripts/rc_april_tag_detect_client',
+             'scripts/rc_qr_code_detect_client']
 )
 
 setup(**setup_args)
