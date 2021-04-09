@@ -69,7 +69,8 @@ def item_to_tf(item, postfix):
 class PickClient(RestClient):
 
     def __init__(self, rest_name):
-        super(PickClient, self).__init__(rest_name)
+        ignored_parameters = ['load_carrier_crop_distance', 'load_carrier_model_tolerance']
+        super(PickClient, self).__init__(rest_name, ignored_parameters)
 
         # client only parameters
         self.publish_tf = rospy.get_param("~publish_tf", True)

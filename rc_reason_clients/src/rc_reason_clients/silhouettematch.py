@@ -60,7 +60,8 @@ def instance_to_tf(instance):
 class SilhouetteMatchClient(RestClient):
 
     def __init__(self):
-        super(SilhouetteMatchClient, self).__init__('rc_silhouettematch')
+        ignored_parameters = ['load_carrier_crop_distance', 'load_carrier_model_tolerance']
+        super(SilhouetteMatchClient, self).__init__('rc_silhouettematch', ignored_parameters)
 
         # client only parameters
         self.publish_tf = rospy.get_param("~publish_tf", True)

@@ -67,8 +67,9 @@ def requests_retry_session(retries=3,
 
 class RestClient(object):
 
-    def __init__(self, rest_name):
+    def __init__(self, rest_name, ignored_parameters=[]):
         self.rest_name = rest_name
+        self.ignored_parameters = ignored_parameters
         self.rest_services = []
         self.ddr = None
 
@@ -112,7 +113,7 @@ class RestClient(object):
 
     def _setup_ddr(self):
         self.ddr = DDynamicReconfigure(rospy.get_name())
-        rest_params = self._get_rest_parameters()
+        rest_params = [p for p in self._get_rest_parameters() if p['name'] not in self.ignored_parameters]
 
         def enum_method_from_param(p):
             if p['type'] != 'string':
