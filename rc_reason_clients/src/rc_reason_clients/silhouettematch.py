@@ -38,9 +38,6 @@ from rc_reason_msgs.srv import SilhouetteMatchDetectObject
 from rc_reason_msgs.srv import CalibrateBasePlane
 from rc_reason_msgs.srv import GetBasePlaneCalibration
 from rc_reason_msgs.srv import DeleteBasePlaneCalibration
-from rc_reason_msgs.srv import GetRegionsOfInterest2D
-from rc_reason_msgs.srv import SetRegionOfInterest2D
-from rc_reason_msgs.srv import DeleteRegionsOfInterest2D
 
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA
@@ -76,9 +73,6 @@ class SilhouetteMatchClient(RestClient):
         self.add_rest_service(CalibrateBasePlane, 'calibrate_base_plane', self.calib_cb)
         self.add_rest_service(GetBasePlaneCalibration, 'get_base_plane_calibration', self.calib_cb)
         self.add_rest_service(DeleteBasePlaneCalibration, 'delete_base_plane_calibration', self.generic_cb)
-        self.add_rest_service(GetRegionsOfInterest2D, 'get_regions_of_interest_2d', self.generic_cb)
-        self.add_rest_service(SetRegionOfInterest2D, 'set_region_of_interest_2d', self.generic_cb)
-        self.add_rest_service(DeleteRegionsOfInterest2D, 'delete_regions_of_interest_2d', self.generic_cb)
 
     def generic_cb(self, srv_name, srv_type, request):
         response = self.call_rest_service(srv_name, srv_type, request)

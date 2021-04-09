@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+
+import rc_reason_clients.load_carrier
+
+
+if __name__ == '__main__':
+    rc_reason_clients.load_carrier.main()
