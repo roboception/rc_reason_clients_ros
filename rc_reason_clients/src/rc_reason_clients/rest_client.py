@@ -167,7 +167,7 @@ class RestClient(object):
             rospy.logdebug("{} rest response: {}".format(name, json.dumps(j, indent=2)))
             rc = j['response'].get('return_code')
             if rc is not None and rc['value'] < 0:
-                rospy.logwarn("service {} returned an error: [{}] {}", name, rc['value'], rc['message'])
+                rospy.logwarn("service {} returned an error: [{}] {}".format(name, rc['value'], rc['message']))
 
             # convert to ROS response
             if srv_type is not None:

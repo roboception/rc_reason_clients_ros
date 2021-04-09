@@ -130,9 +130,8 @@ def convert_dictionary_to_ros_message(message_type, dictionary, kind='message'):
             field_value = _convert_to_ros_type(field_type, field_value)
             setattr(message, field_name, field_value)
         else:
-            error_message = 'ROS message type "{0}" has no field named "{1}"'\
-                .format(message_type, field_name)
-            raise ValueError(error_message)
+            rospy.logwarn('ROS message type "{}" has no field named "{}", ignoring it.'\
+                .format(message_type, field_name))
 
     return message
 
