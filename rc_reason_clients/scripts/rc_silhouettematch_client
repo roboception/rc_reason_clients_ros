@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+
+import rc_reason_clients.silhouettematch
+
+
+if __name__ == '__main__':
+    rc_reason_clients.silhouettematch.main()
