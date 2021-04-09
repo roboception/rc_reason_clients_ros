@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+
+import rc_reason_clients.pick
+
+
+if __name__ == '__main__':
+    rc_reason_clients.pick.rc_boxpick_client()

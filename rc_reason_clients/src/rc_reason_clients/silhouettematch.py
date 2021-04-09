@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright 2021 Roboception GmbH
 #
 # Redistribution and use in source and binary forms, with or without
@@ -80,8 +82,6 @@ class SilhouetteMatchClient(RestClient):
 
     def generic_cb(self, srv_name, srv_type, request):
         response = self.call_rest_service(srv_name, srv_type, request)
-        if not response.success:
-            rospy.logwarn("service %s: %s", srv_name, response.message)
         return response
 
     def detect_cb(self, srv_name, srv_type, request):
