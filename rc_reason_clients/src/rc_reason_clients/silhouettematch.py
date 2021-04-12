@@ -45,15 +45,15 @@ from std_msgs.msg import ColorRGBA
 from rc_reason_clients.rest_client import RestClient
 
 
-def instance_to_tf(instance):
+def match_to_tf(match):
     tf = TransformStamped()
-    tf.header.frame_id = instance.pose_frame
-    tf.child_frame_id = "{}_{}".format(instance.object_id, instance.id)
-    tf.header.stamp = instance.timestamp
-    tf.transform.translation.x = instance.pose.position.x
-    tf.transform.translation.y = instance.pose.position.y
-    tf.transform.translation.z = instance.pose.position.z
-    tf.transform.rotation = instance.pose.orientation
+    tf.header.frame_id = match.pose_frame
+    tf.child_frame_id = "{}_{}".format(match.object_id, match.id)
+    tf.header.stamp = match.timestamp
+    tf.transform.translation.x = match.pose.position.x
+    tf.transform.translation.y = match.pose.position.y
+    tf.transform.translation.z = match.pose.position.z
+    tf.transform.rotation = match.pose.orientation
     return tf
 
 
@@ -81,7 +81,7 @@ class SilhouetteMatchClient(RestClient):
 
     def detect_cb(self, srv_name, srv_type, request):
         response = self.call_rest_service(srv_name, srv_type, request)
-        self.pub_instances(response.instances)
+        self.pub_matches(response.matches)
         return response
 
     def calib_cb(self, srv_name, srv_type, request):
@@ -90,12 +90,12 @@ class SilhouetteMatchClient(RestClient):
             self.publish_base_plane_markers(response.plane, response.pose_frame)
         return response
 
-    def pub_instances(self, instances):
-        if not instances:
+    def pub_matches(self, matches):
+        if not matches:
             return
         if not self.publish_tf:
             return
-        transforms = [instance_to_tf(i) for i in instances]
+        transforms = [match_to_tf(i) for i in matches]
         self.pub_tf.publish(TFMessage(transforms=transforms))
 
     def publish_base_plane_markers(self, plane, pose_frame):

@@ -53,18 +53,19 @@ add_message_files(
   CollisionDetection.msg
   Compartment.msg
   DetectedTag.msg
+  Grasp.msg
   GridSize.msg
   Item.msg
   ItemModel.msg
   LoadCarrier.msg
   LoadCarrierWithFillingLevel.msg
+  Match.msg
   RangeBox.msg
   RangeRectangle.msg
   RangeValue.msg
   Rectangle.msg
   RegionOfInterest2D.msg
   RegionOfInterest3D.msg
-  SilhouetteMatchInstance.msg
   SilhouetteMatchObject.msg
   SuctionGrasp.msg
   Tag.msg
