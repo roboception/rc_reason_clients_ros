@@ -28,6 +28,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 import rospy
 
 from tf2_msgs.msg import TFMessage
@@ -38,7 +40,7 @@ from rc_reason_msgs.srv import HandEyeCalibrationTrigger
 from rc_reason_msgs.srv import SetHandEyeCalibration
 from rc_reason_msgs.srv import SetHandEyeCalibrationPose
 
-from rest_client import RestClient
+from . import RestClient
 
 
 class HandEyeCalibClient(RestClient):

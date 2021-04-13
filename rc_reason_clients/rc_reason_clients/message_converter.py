@@ -31,6 +31,8 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 import roslib.message
 import rospy
 import genpy
@@ -38,7 +40,7 @@ import re
 import base64
 import sys
 
-from custom_mappings import map_api2ros, map_ros2api
+from .custom_mappings import map_api2ros, map_ros2api
 
 python3 = True if sys.hexversion > 0x03000000 else False
 python_to_ros_type_map = {
