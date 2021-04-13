@@ -54,6 +54,7 @@ stages:
 # Debian packaging
 .package:
   script:
+    - dpkg -i ${CI_PROJECT_DIR}/rc_reason_msgs/build/*~${DISTRO_CODENAME}_${DEB_ARCH}.deb || true
     - if [ -n "$PROJECT" ]; then cd $PROJECT; fi
     - mkdir build && cd build
     - cmake -DCATKIN_BUILD_BINARY_PACKAGE="1" -DCMAKE_INSTALL_PREFIX="/opt/ros/$ROS_DISTRO" -DCMAKE_PREFIX_PATH="/opt/ros/$ROS_DISTRO" -DCMAKE_BUILD_TYPE=Release ..
