@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 from functools import partial
 
 import rospy
@@ -40,7 +42,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 from ddynamic_reconfigure_python.ddynamic_reconfigure import DDynamicReconfigure
 
-from message_converter import convert_dictionary_to_ros_message, convert_ros_message_to_dictionary
+from .message_converter import convert_dictionary_to_ros_message, convert_ros_message_to_dictionary
 
 def requests_retry_session(retries=3,
                            backoff_factor=0.3,
@@ -172,7 +174,7 @@ class RestClient(object):
 
             # convert to ROS response
             if srv_type is not None:
-                response = convert_dictionary_to_ros_message(srv_type._response_class(), j['response'])
+                response = convert_dictionary_to_ros_message(srv_type._response_class(), j['response'], strict_mode=False)
             else:
                 response = j['response']
         except Exception as e:

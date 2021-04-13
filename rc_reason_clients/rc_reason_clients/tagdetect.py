@@ -28,6 +28,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 import rospy
 
 from tf2_msgs.msg import TFMessage
@@ -37,7 +39,7 @@ from std_msgs.msg import ColorRGBA
 
 from rc_reason_msgs.srv import DetectTags
 
-from rest_client import RestClient
+from .rest_client import RestClient
 
 
 def tag_to_tf(tag):

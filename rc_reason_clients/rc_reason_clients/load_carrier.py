@@ -28,6 +28,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 import rospy
 
 from tf2_msgs.msg import TFMessage
@@ -41,8 +43,8 @@ from rc_reason_msgs.srv import GetRegionsOfInterest2D, SetRegionOfInterest2D, De
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA
 
-from rc_reason_clients.rest_client import RestClient
-from rc_reason_clients.transform_helpers import lc_to_marker, load_carrier_to_tf
+from .rest_client import RestClient
+from .transform_helpers import lc_to_marker, load_carrier_to_tf
 
 
 class LoadCarrierClient(RestClient):

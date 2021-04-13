@@ -28,6 +28,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 import rospy
 
 from math import sqrt
@@ -42,7 +44,7 @@ from rc_reason_msgs.srv import DeleteBasePlaneCalibration
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA
 
-from rc_reason_clients.rest_client import RestClient
+from .rest_client import RestClient
 
 
 def match_to_tf(match):
