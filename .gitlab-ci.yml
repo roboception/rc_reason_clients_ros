@@ -48,8 +48,8 @@ stages:
     - dpkg -i ./rc_reason_msgs/build/*~${DISTRO_CODENAME}_${DEB_ARCH}.deb || true
     - apt-get -f -y install
     - cd rc_reason_clients
-    - apt-get install -y python-pytest
-    - python -m pytest -s -vvv
+    - if [ "ROS_PYTHON_VERSION" = "3" ]; then apt-get install -y python3-pytest; else apt-get install -y python-pytest; fi
+    - python${ROS_PYTHON_VERSION} -m pytest -s -vvv
 
 # Debian packaging
 .package:
@@ -108,9 +108,9 @@ build_msgs:bionic:armhf:
   <<: *armhf_bionic_job
   extends: .build_msgs
 
-#build_msgs:focal:amd64:
-#  <<: *amd64_focal_job
-#  extends: .build_msgs
+build_msgs:focal:amd64:
+  <<: *amd64_focal_job
+  extends: .build_msgs
 
 # Test clients with previously build msgs (on every commit)
 ###########################################################
@@ -122,9 +122,9 @@ test:bionic:armhf:
   <<: *armhf_bionic_job
   extends: .test
 
-#test:focal:amd64:
-#  <<: *amd64_focal_job
-#  extends: .test
+test:focal:amd64:
+  <<: *amd64_focal_job
+  extends: .test
 
 ################################
 # package and upload for testing
@@ -139,9 +139,9 @@ package_testing:bionic:armhf:
   <<: *armhf_bionic_job
   extends: .package_testing
 
-#package_testing:focal:amd64:
-#  <<: *amd64_focal_job
-#  extends: .package_testing
+package_testing:focal:amd64:
+  <<: *amd64_focal_job
+  extends: .package_testing
 
 ###################################
 # package and upload for stable
@@ -155,6 +155,6 @@ package_stable:bionic:armhf:
   <<: *armhf_bionic_job
   extends: .package_stable
 
-#package_stable:focal:amd64:
-#  <<: *amd64_focal_job
-#  extends: .package_stable
+package_stable:focal:amd64:
+  <<: *amd64_focal_job
+  extends: .package_stable
