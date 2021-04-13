@@ -48,7 +48,7 @@ stages:
     - dpkg -i ./rc_reason_msgs/build/*~${DISTRO_CODENAME}_${DEB_ARCH}.deb || true
     - apt-get -f -y install
     - cd rc_reason_clients
-    - if [ "ROS_PYTHON_VERSION" = "3" ]; then apt-get install -y python3-pytest; else apt-get install -y python-pytest; fi
+    - if [ "$ROS_PYTHON_VERSION" = "3" ]; then apt-get install -y python3-pytest; else apt-get install -y python-pytest; fi
     - python${ROS_PYTHON_VERSION} -m pytest -s -vvv
 
 # Debian packaging
