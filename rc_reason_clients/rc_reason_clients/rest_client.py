@@ -174,7 +174,7 @@ class RestClient(object):
 
             # convert to ROS response
             if srv_type is not None:
-                response = convert_dictionary_to_ros_message(srv_type._response_class(), j['response'])
+                response = convert_dictionary_to_ros_message(srv_type._response_class(), j['response'], strict_mode=False)
             else:
                 response = j['response']
         except Exception as e:

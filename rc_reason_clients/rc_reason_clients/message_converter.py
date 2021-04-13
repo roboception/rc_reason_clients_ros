@@ -31,12 +31,16 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 import roslib.message
 import rospy
 import base64
 import sys
 import copy
 import collections
+
+from .custom_mappings import map_api2ros, map_ros2api
 
 python3 = (sys.hexversion > 0x03000000)
 
@@ -118,22 +122,31 @@ def convert_dictionary_to_ros_message(message_type, dictionary, kind='message', 
         >>> convert_dictionary_to_ros_message(msg_type, dict_msg, kind)
         data: True
     """
-    if kind == 'message':
-        message_class = roslib.message.get_message_class(message_type)
-        message = message_class()
-    elif kind == 'request':
-        service_class = roslib.message.get_service_class(message_type)
-        message = service_class._request_class()
-    elif kind == 'response':
-        service_class = roslib.message.get_service_class(message_type)
-        message = service_class._response_class()
+    if hasattr(message_type, '_type'):
+        message = message_type
+        message_type = message._type
+    elif type(message_type) in python_string_types:
+        if kind == 'message':
+            message_class = roslib.message.get_message_class(message_type)
+            message = message_class()
+        elif kind == 'request':
+            service_class = roslib.message.get_service_class(message_type)
+            message = service_class._request_class()
+        elif kind == 'response':
+            service_class = roslib.message.get_service_class(message_type)
+            message = service_class._response_class()
+        else:
+            raise ValueError('Unknown kind "%s".' % kind)
     else:
-        raise ValueError('Unknown kind "%s".' % kind)
-    message_fields = dict(_get_message_fields(message))
+        raise ValueError('message_type is not a ROS message instance nor type string')
 
+    # do our custom mappings if required
+    mapped_dict = map_api2ros(dictionary, message_type)
+
+    message_fields = dict(_get_message_fields(message))
     remaining_message_fields = copy.deepcopy(message_fields)
 
-    for field_name, field_value in dictionary.items():
+    for field_name, field_value in mapped_dict.items():
         if field_name in message_fields:
             field_type = message_fields[field_name]
             field_value = _convert_to_ros_type(field_name, field_type, field_value, strict_mode, check_missing_fields,
@@ -204,10 +217,10 @@ def _convert_to_ros_time(field_type, field_value):
             time = rospy.rostime.Time()
         elif field_type == 'duration':
             time = rospy.rostime.Duration()
-        if 'secs' in field_value:
-            setattr(time, 'secs', field_value['secs'])
-        if 'nsecs' in field_value:
-            setattr(time, 'nsecs', field_value['nsecs'])
+        if 'sec' in field_value:
+            setattr(time, 'secs', field_value['sec'])
+        if 'nsec' in field_value:
+            setattr(time, 'nsecs', field_value['nsec'])
 
     return time
 
@@ -240,7 +253,9 @@ def convert_ros_message_to_dictionary(message, binary_array_as_bytes=True):
         field_value = getattr(message, field_name)
         dictionary[field_name] = _convert_from_ros_type(field_type, field_value, binary_array_as_bytes)
 
-    return dictionary
+    # do our custom mappings if required
+    mapped_dict = map_ros2api(dictionary, message._type)
+    return mapped_dict
 
 
 def _convert_from_ros_type(field_type, field_value, binary_array_as_bytes=True):
@@ -288,8 +303,8 @@ def _convert_from_ros_binary(field_type, field_value):
 
 def _convert_from_ros_time(field_type, field_value):
     field_value = {
-        'secs'  : field_value.secs,
-        'nsecs' : field_value.nsecs
+        'sec'  : field_value.secs,
+        'nsec' : field_value.nsecs
     }
     return field_value
 
@@ -317,8 +332,3 @@ def _is_field_type_a_primitive_array(field_type):
     else:
         list_type = field_type[:bracket_index]
         return list_type in ros_primitive_types
-
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
