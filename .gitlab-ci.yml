@@ -1,0 +1,159 @@
+before_script:
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt-get update -yq && apt-get install -y curl file git lintian lsb-release
+  - export DISTRO_CODENAME=`lsb_release -cs` && echo Using distro $DISTRO_CODENAME
+  - export DEB_ARCH=`dpkg --print-architecture` && echo architecture $DEB_ARCH
+  - echo "deb http://apt.roboception.de/stable $DISTRO_CODENAME main" > /etc/apt/sources.list.d/roboception-stable.list
+  - if [ "$TESTING_DEBS" = "true" ]; then echo "deb http://apt.roboception.de/testing $DISTRO_CODENAME main" > /etc/apt/sources.list.d/roboception-testing.list ; fi
+  - curl -fsSL http://apt.roboception.de/archive.key | apt-key add -
+  - apt-get update -yq
+  - rosdep install --from-paths . --ignore-src -r -y
+
+variables:
+  GET_SOURCES_ATTEMPTS: "3"
+  GIT_DEPTH: "0"
+
+stages:
+  - build_msgs
+  - test
+  - deploy
+
+#########################
+# Templates using anchors
+#########################
+.amd64_bionic_t: &amd64_bionic_job
+  image: ros:melodic-perception
+  tags:
+    - amd64
+    - docker
+
+.armhf_bionic_t: &armhf_bionic_job
+  image: registry.roboception.de/tools/docker_images:armhf-melodic-perception
+  tags:
+    - armhf
+    - docker
+
+.amd64_focal_t: &amd64_focal_job
+  image: ros:noetic-perception
+  tags:
+    - amd64
+    - docker
+
+#############
+# Templates
+#############
+.test:
+  stage: test
+  script:
+    - dpkg -i ./rc_reason_msgs/build/*~${DISTRO_CODENAME}_${DEB_ARCH}.deb || true
+    - apt-get -f -y install
+    - cd rc_reason_clients
+    - apt-get install -y python-pytest
+    - python -m pytest -s -vvv
+
+# Debian packaging
+.package:
+  script:
+    - if [ -n "$PROJECT" ]; then cd $PROJECT; fi
+    - mkdir build && cd build
+    - cmake -DCATKIN_BUILD_BINARY_PACKAGE="1" -DCMAKE_INSTALL_PREFIX="/opt/ros/$ROS_DISTRO" -DCMAKE_PREFIX_PATH="/opt/ros/$ROS_DISTRO" -DCMAKE_BUILD_TYPE=Release ..
+    - make -j 4
+    - make package
+    - DEBS=$(find $CI_PROJECT_DIR -maxdepth 3 -name "*~${DISTRO_CODENAME}_${DEB_ARCH}.deb")
+    - echo "DEBS=$DEBS"
+    - if [ -n "$APT_REPO" ]; then upload_deb.sh $DISTRO_CODENAME-$APT_REPO $DEBS; fi
+
+.build_msgs:
+  extends: .package
+  stage: build_msgs
+  variables:
+    PROJECT: "rc_reason_msgs"
+  artifacts:
+    paths:
+      - rc_reason_msgs/build/*.deb
+    expire_in: 30 days
+
+.package_testing:
+  extends: .package
+  stage: deploy
+  only:
+    - master
+  except:
+    - tags
+  variables:
+    PROJECT: "rc_reason_clients"
+    APT_REPO: "testing"
+
+.package_stable:
+  extends: .package
+  stage: deploy
+  only:
+    - /^v[0-9]+\.[0-9]+\.[0-9]+/
+  except:
+    - branches
+  variables:
+    PROJECT: "rc_reason_clients"
+    APT_REPO: "stable"
+
+##############
+#### Jobs ####
+##############
+
+build_msgs:bionic:amd64:
+  <<: *amd64_bionic_job
+  extends: .build_msgs
+
+build_msgs:bionic:armhf:
+  <<: *armhf_bionic_job
+  extends: .build_msgs
+
+#build_msgs:focal:amd64:
+#  <<: *amd64_focal_job
+#  extends: .build_msgs
+
+# Test clients with previously build msgs (on every commit)
+###########################################################
+test:bionic:amd64:
+  <<: *amd64_bionic_job
+  extends: .test
+
+test:bionic:armhf:
+  <<: *armhf_bionic_job
+  extends: .test
+
+#test:focal:amd64:
+#  <<: *amd64_focal_job
+#  extends: .test
+
+################################
+# package and upload for testing
+# (only on master)
+################################
+
+package_testing:bionic:amd64:
+  <<: *amd64_bionic_job
+  extends: .package_testing
+
+package_testing:bionic:armhf:
+  <<: *armhf_bionic_job
+  extends: .package_testing
+
+#package_testing:focal:amd64:
+#  <<: *amd64_focal_job
+#  extends: .package_testing
+
+###################################
+# package and upload for stable
+# (only for releases, version tags)
+###################################
+package_stable:bionic:amd64:
+  <<: *amd64_bionic_job
+  extends: .package_stable
+
+package_stable:bionic:armhf:
+  <<: *armhf_bionic_job
+  extends: .package_stable
+
+#package_stable:focal:amd64:
+#  <<: *amd64_focal_job
+#  extends: .package_stable
