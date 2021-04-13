@@ -38,6 +38,18 @@ catkin_package(
 include_directories(
 )
 
+# install node wrappers
+catkin_install_python(PROGRAMS
+  scripts/rc_hand_eye_calibration_client
+  scripts/rc_april_tag_detect_client
+  scripts/rc_qr_code_detect_client
+  scripts/rc_boxpick_client
+  scripts/rc_itempick_client
+  scripts/rc_silhouettematch_client
+  scripts/rc_load_carrier_client
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 ######################################
 ## Define information for packaging ##
 ######################################
