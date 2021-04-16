@@ -146,7 +146,6 @@ def map_api2ros(msg, rostype):
                      'rc_reason_msgs/DetectFillingLevelResponse',
                      'rc_reason_msgs/DetectLoadCarriersResponse',
                      'rc_reason_msgs/DetectItemsResponse',
-                     'rc_reason_msgs/SilhouetteMatchDetectObjectResponse',
                      'rc_reason_msgs/CadMatchDetectObjectResponse'
                      ]:
         new_msg = {k: v for k, v in msg.items() if k not in ['load_carriers']}
