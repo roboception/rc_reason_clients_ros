@@ -49,8 +49,11 @@ def map_ros2api(msg, rostype):
         new_msg['pose'] = msg['pose']['pose']
         new_msg['pose_frame'] = msg['pose']['header']['frame_id']
         return new_msg
-    elif rostype in ['rc_reason_msgs/DetectLoadCarriersRequest', 'rc_reason_msgs/DetectFillingLevelRequest',
-                     'rc_reason_msgs/DetectTagsRequest', 'rc_reason_msgs/SilhouetteMatchDetectObjectRequest']:
+    elif rostype in ['rc_reason_msgs/DetectLoadCarriersRequest',
+                     'rc_reason_msgs/DetectFillingLevelRequest',
+                     'rc_reason_msgs/DetectTagsRequest',
+                     'rc_reason_msgs/SilhouetteMatchDetectObjectRequest',
+                     'rc_reason_msgs/CadMatchDetectObjectRequest']:
         new_msg = copy.deepcopy(msg)
         # don't send robot pose if not external
         if msg['pose_frame'] != 'external':
@@ -142,7 +145,10 @@ def map_api2ros(msg, rostype):
     elif rostype in ['rc_reason_msgs/ComputeGraspsResponse',
                      'rc_reason_msgs/DetectFillingLevelResponse',
                      'rc_reason_msgs/DetectLoadCarriersResponse',
-                     'rc_reason_msgs/DetectItemsResponse']:
+                     'rc_reason_msgs/DetectItemsResponse',
+                     'rc_reason_msgs/SilhouetteMatchDetectObjectResponse',
+                     'rc_reason_msgs/CadMatchDetectObjectResponse'
+                     ]:
         new_msg = {k: v for k, v in msg.items() if k not in ['load_carriers']}
         new_msg['load_carriers'] = []
         for lc in msg['load_carriers']:
