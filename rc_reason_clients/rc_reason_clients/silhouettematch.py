@@ -45,7 +45,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA
 
 from .rest_client import RestClient
-from .transform_helpers import match_to_tf
+from .transform_helpers import lc_to_marker, load_carrier_to_tf, match_to_tf
 
 
 class SilhouetteMatchClient(RestClient):
@@ -61,6 +61,8 @@ class SilhouetteMatchClient(RestClient):
         self.pub_tf = rospy.Publisher('/tf', TFMessage, queue_size=10)
         self.pub_markers = rospy.Publisher('visualization_marker_array', MarkerArray, queue_size=10)
 
+        self.lc_markers = []
+
         self.add_rest_service(SilhouetteMatchDetectObject, 'detect_object', self.detect_cb)
         self.add_rest_service(CalibrateBasePlane, 'calibrate_base_plane', self.calib_cb)
         self.add_rest_service(GetBasePlaneCalibration, 'get_base_plane_calibration', self.calib_cb)
@@ -73,6 +75,7 @@ class SilhouetteMatchClient(RestClient):
     def detect_cb(self, srv_name, srv_type, request):
         response = self.call_rest_service(srv_name, srv_type, request)
         self.pub_matches(response.matches)
+        self.publish_lcs(response.load_carriers)
         return response
 
     def calib_cb(self, srv_name, srv_type, request):
@@ -82,12 +85,32 @@ class SilhouetteMatchClient(RestClient):
         return response
 
     def pub_matches(self, matches):
-        if not matches:
-            return
-        if not self.publish_tf:
+        if not matches or not self.publish_tf:
             return
         transforms = [match_to_tf(i) for i in matches]
         self.pub_tf.publish(TFMessage(transforms=transforms))
+
+    def publish_lcs(self, lcs):
+        if lcs and self.publish_tf:
+            transforms = [load_carrier_to_tf(lc, i) for i, lc in enumerate(lcs)]
+            self.pub_tf.publish(TFMessage(transforms=transforms))
+        if self.publish_markers:
+            self.publish_lc_markers(lcs)
+
+    def publish_lc_markers(self, lcs):
+        new_markers = []
+        for i, lc in enumerate(lcs):
+            m = lc_to_marker(lc, i, self.rest_name + "_lcs")
+            if i < len(self.lc_markers):
+                self.lc_markers[i] = m
+            else:
+                self.lc_markers.append(m)
+            new_markers.append(m)
+        for i in range(len(lcs), len(self.lc_markers)):
+            # delete old markers
+            self.lc_markers[i].action = Marker.DELETE
+        self.pub_markers.publish(MarkerArray(markers=self.lc_markers))
+        self.lc_markers = new_markers
 
     def publish_base_plane_markers(self, plane, pose_frame):
         def create_marker(plane, id=0):
