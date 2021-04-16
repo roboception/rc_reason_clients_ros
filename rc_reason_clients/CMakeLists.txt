@@ -47,6 +47,7 @@ catkin_install_python(PROGRAMS
   scripts/rc_itempick_client
   scripts/rc_silhouettematch_client
   scripts/rc_load_carrier_client
+  scripts/rc_cadmatch_client
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

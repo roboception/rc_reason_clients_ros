@@ -1,4 +1,4 @@
-# id of template this match
+# id of template which was matched
 string template_id
 
 # unique id of this match

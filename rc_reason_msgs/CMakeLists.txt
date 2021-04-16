@@ -74,6 +74,7 @@ add_message_files(
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
+  CadMatchDetectObject.srv
   CalibrateBasePlane.srv
   ComputeGrasps.srv
   DeleteBasePlaneCalibration.srv

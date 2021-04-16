@@ -36,23 +36,20 @@ from math import sqrt
 from tf2_msgs.msg import TFMessage
 from geometry_msgs.msg import TransformStamped, Quaternion
 
-from rc_reason_msgs.srv import SilhouetteMatchDetectObject
-from rc_reason_msgs.srv import CalibrateBasePlane
-from rc_reason_msgs.srv import GetBasePlaneCalibration
-from rc_reason_msgs.srv import DeleteBasePlaneCalibration
+from rc_reason_msgs.srv import CadMatchDetectObject
 
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA
 
 from .rest_client import RestClient
-from .transform_helpers import match_to_tf
+from .transform_helpers import lc_to_marker, load_carrier_to_tf, match_to_tf
 
 
-class SilhouetteMatchClient(RestClient):
+class CadMatchClient(RestClient):
 
     def __init__(self):
         ignored_parameters = ['load_carrier_crop_distance', 'load_carrier_model_tolerance']
-        super(SilhouetteMatchClient, self).__init__('rc_silhouettematch', ignored_parameters)
+        super(CadMatchClient, self).__init__('rc_cadmatch', ignored_parameters)
 
         # client only parameters
         self.publish_tf = rospy.get_param("~publish_tf", True)
@@ -61,65 +58,59 @@ class SilhouetteMatchClient(RestClient):
         self.pub_tf = rospy.Publisher('/tf', TFMessage, queue_size=10)
         self.pub_markers = rospy.Publisher('visualization_marker_array', MarkerArray, queue_size=10)
 
-        self.add_rest_service(SilhouetteMatchDetectObject, 'detect_object', self.detect_cb)
-        self.add_rest_service(CalibrateBasePlane, 'calibrate_base_plane', self.calib_cb)
-        self.add_rest_service(GetBasePlaneCalibration, 'get_base_plane_calibration', self.calib_cb)
-        self.add_rest_service(DeleteBasePlaneCalibration, 'delete_base_plane_calibration', self.generic_cb)
+        self.lc_markers = []
 
-    def generic_cb(self, srv_name, srv_type, request):
-        response = self.call_rest_service(srv_name, srv_type, request)
-        return response
+        self.add_rest_service(CadMatchDetectObject, 'detect_object', self.detect_cb)
+
+        rospy.on_shutdown(self.stop)
+
+        self.start()
+
+    def start(self):
+        rospy.loginfo("starting %s", self.rest_name)
+        self.call_rest_service('start')
+
+    def stop(self):
+        rospy.loginfo("stopping %s", self.rest_name)
+        self.call_rest_service('stop')
 
     def detect_cb(self, srv_name, srv_type, request):
         response = self.call_rest_service(srv_name, srv_type, request)
         self.pub_matches(response.matches)
-        return response
-
-    def calib_cb(self, srv_name, srv_type, request):
-        response = self.call_rest_service(srv_name, srv_type, request)
-        if response.return_code.value >= 0:
-            self.publish_base_plane_markers(response.plane, response.pose_frame)
+        self.publish_lcs(response.load_carriers)
         return response
 
     def pub_matches(self, matches):
-        if not matches:
-            return
-        if not self.publish_tf:
+        if not matches or not self.publish_tf:
             return
         transforms = [match_to_tf(i) for i in matches]
         self.pub_tf.publish(TFMessage(transforms=transforms))
 
-    def publish_base_plane_markers(self, plane, pose_frame):
-        def create_marker(plane, id=0):
-            m = Marker(action=Marker.ADD, type=Marker.CYLINDER)
-            m.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.5)
-            m.header.frame_id = pose_frame
-            m.pose.position.x = -plane.coef[0] * plane.coef[3]
-            m.pose.position.y = -plane.coef[1] * plane.coef[3]
-            m.pose.position.z = -plane.coef[2] * plane.coef[3]
-            # quaternion yielding double the desired rotation (if normal is normalized):
-            # q.w = dot(zaxis, normal), q.xyz = cross(zaxis, normal)
-            # add quaternion with zero rotation (xyz=0, w=1) to get half the rotation from above
-            # and normalize again
-            q = Quaternion(x=-plane.coef[1], y=plane.coef[0], z=0.0, w=plane.coef[2] + 1.0)
-            norm = sqrt(q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w)
-            m.pose.orientation.x = q.x / norm
-            m.pose.orientation.y = q.y / norm
-            m.pose.orientation.w = q.z / norm
-            m.pose.orientation.x = q.z / norm
-            m.scale.x = 1.0
-            m.scale.y = 1.0
-            m.scale.z = 0.001
-            m.id = id
-            m.ns = self.rest_name + "_base_plane"
-            return m
+    def publish_lcs(self, lcs):
+        if lcs and self.publish_tf:
+            transforms = [load_carrier_to_tf(lc, i) for i, lc in enumerate(lcs)]
+            self.pub_tf.publish(TFMessage(transforms=transforms))
+        if self.publish_markers:
+            self.publish_lc_markers(lcs)
 
-        m = create_marker(plane)
-        self.pub_markers.publish(MarkerArray(markers=[m]))
+    def publish_lc_markers(self, lcs):
+        new_markers = []
+        for i, lc in enumerate(lcs):
+            m = lc_to_marker(lc, i, self.rest_name + "_lcs")
+            if i < len(self.lc_markers):
+                self.lc_markers[i] = m
+            else:
+                self.lc_markers.append(m)
+            new_markers.append(m)
+        for i in range(len(lcs), len(self.lc_markers)):
+            # delete old markers
+            self.lc_markers[i].action = Marker.DELETE
+        self.pub_markers.publish(MarkerArray(markers=self.lc_markers))
+        self.lc_markers = new_markers
 
 
 def main():
-    client = SilhouetteMatchClient()
+    client = CadMatchClient()
 
     try:
         rospy.spin()

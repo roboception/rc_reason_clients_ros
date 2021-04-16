@@ -60,3 +60,14 @@ def lc_to_marker(lc, lc_no, ns):
     m.scale.z = lc.outer_dimensions.z
 
     return m
+
+def match_to_tf(match):
+    tf = TransformStamped()
+    tf.header.frame_id = match.pose.header.frame_id
+    tf.child_frame_id = "{}_{}".format(match.template_id, match.uuid)
+    tf.header.stamp = match.pose.header.stamp
+    tf.transform.translation.x = match.pose.pose.position.x
+    tf.transform.translation.y = match.pose.pose.position.y
+    tf.transform.translation.z = match.pose.pose.position.z
+    tf.transform.rotation = match.pose.pose.orientation
+    return tf

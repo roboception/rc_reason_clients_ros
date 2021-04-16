@@ -1,9 +1,10 @@
 rc_reason_clients for ROS1
 ==========================
 
-This package provides ROS1 client nodes that interface with Roboception devices like the [rc_visard](https://roboception.com/rc_visard) 3D sensor.
+This package provides ROS1 client nodes that interface with Roboception devices like the [rc_visard](https://roboception.com/rc_visard) 3D sensor and [rc_cube](https://roboception.com/rc_cube).
 
-Please consult the manual for detailed descriptions of parameters and services: https://doc.rc-visard.com.
+Please consult the manual for detailed descriptions of parameters and services:
+https://doc.rc-visard.com https://doc.rc-cube.com
 
 These rc_reason client nodes communicate with the device via REST-API and make the functionality available in a ROS native way:
 
