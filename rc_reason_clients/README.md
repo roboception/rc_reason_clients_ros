@@ -3,8 +3,9 @@ rc_reason_clients for ROS1
 
 This package provides ROS1 client nodes that interface with Roboception devices like the [rc_visard](https://roboception.com/rc_visard) 3D sensor and [rc_cube](https://roboception.com/rc_cube).
 
-Please consult the manual for detailed descriptions of parameters and services:
-https://doc.rc-visard.com https://doc.rc-cube.com
+Please consult the manuals for detailed descriptions of parameters and services:
+* https://doc.rc-visard.com
+* https://doc.rc-cube.com
 
 These rc_reason client nodes communicate with the device via REST-API and make the functionality available in a ROS native way:
 
@@ -147,3 +148,24 @@ The client has an additional parameters to enable publishing of detected load ca
 
 To run the client:
 `rosrun rc_reason_clients rc_load_carrier_client _host:=10.0.2.40`
+
+rc_cadmatch_client
+------------------
+
+CADMatch is only available for the rc_cube.
+
+Client to interface with CADMatch on the rc_cube.
+
+See the [CADMatch documentation](https://doc.rc-cube.com/latest/en/cadmatch.html) for details.
+
+[CADMatch parameters](https://doc.rc-cube.com/latest/en/cadmatch.html#parameters)
+
+The client has an additional parameters to enable publishing of detected load carriers on `/tf` or as markers:
+
+* `publish_tf`: Publish detected load carriers on tf (default: True)
+* `publish_markers`: Publish detected load_carriers as visualization markers (default: True)
+
+[CADMatch services](https://doc.rc-cube.com/latest/en/cadmatch.html#services)
+
+To run the client:
+`rosrun rc_reason_clients rc_cadmatch_client _host:=10.0.2.40`
