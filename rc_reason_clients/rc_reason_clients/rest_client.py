@@ -75,7 +75,7 @@ class RestClient(object):
         self.rest_services = []
         self.ddr = None
 
-        rospy.init_node(rest_name + '_client', log_level=rospy.DEBUG)
+        rospy.init_node(rest_name + '_client', log_level=rospy.INFO)
 
         self.host = rospy.get_param('~host', '')
         if not self.host:
