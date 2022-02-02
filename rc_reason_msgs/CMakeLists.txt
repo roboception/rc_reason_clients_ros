@@ -57,6 +57,7 @@ add_message_files(
   GridSize.msg
   Item.msg
   ItemModel.msg
+  LoadCarrierModel.msg
   LoadCarrier.msg
   LoadCarrierWithFillingLevel.msg
   Match.msg
