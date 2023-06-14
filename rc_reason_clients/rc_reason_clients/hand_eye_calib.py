@@ -40,7 +40,7 @@ from rc_reason_msgs.srv import HandEyeCalibrationTrigger
 from rc_reason_msgs.srv import SetHandEyeCalibration
 from rc_reason_msgs.srv import SetHandEyeCalibrationPose
 
-from . import RestClient
+from .rest_client import RestClient
 
 
 class HandEyeCalibClient(RestClient):
