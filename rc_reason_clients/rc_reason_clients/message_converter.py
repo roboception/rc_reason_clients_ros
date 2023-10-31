@@ -138,7 +138,7 @@ def convert_dictionary_to_ros_message(message_type, dictionary, kind='message', 
         else:
             raise ValueError('Unknown kind "%s".' % kind)
     else:
-        raise ValueError('message_type is not a ROS message instance nor type string')
+        raise ValueError('message_type is neither a ROS message instance nor type string')
 
     # do our custom mappings if required
     mapped_dict = map_api2ros(dictionary, message_type)
@@ -266,7 +266,7 @@ def _convert_from_ros_type(field_type, field_value, binary_array_as_bytes=True):
     elif _is_ros_binary_type(field_type):
         if binary_array_as_bytes:
             field_value = _convert_from_ros_binary(field_type, field_value)
-        elif type(field_value) == str:
+        elif isinstance(field_value, str):
             field_value = [ord(v) for v in field_value]
         else:
             field_value = list(field_value)

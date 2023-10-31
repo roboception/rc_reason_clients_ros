@@ -98,6 +98,7 @@ add_service_files(
   SetRegionOfInterest2D.srv
   SetRegionOfInterest3D.srv
   SilhouetteMatchDetectObject.srv
+  WarmupTemplate.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
