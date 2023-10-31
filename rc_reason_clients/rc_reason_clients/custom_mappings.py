@@ -177,6 +177,7 @@ def map_api2ros(msg, rostype):
         new_msg['load_carriers'] = []
         for lc in msg['load_carriers']:
             new_msg['load_carriers'].append(_to_ros_pose_stamped(lc, msg['timestamp']))
+        new_msg['object_id'] = msg['object_id']
         return new_msg
     elif rostype == 'rc_reason_msgs/Match':
         new_msg = _to_ros_pose_stamped(msg)
@@ -198,6 +199,7 @@ def map_api2ros(msg, rostype):
         if 'instance_uuid' in new_msg:
             new_msg['match_uuid'] = msg['instance_uuid']
             del new_msg['instance_uuid']
+
         return new_msg
 
     # no mapping required, return auto-generated one

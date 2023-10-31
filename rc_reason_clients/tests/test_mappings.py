@@ -32,9 +32,9 @@ from rc_reason_clients.message_converter import (
     convert_dictionary_to_ros_message,
     convert_ros_message_to_dictionary,
 )
-from rc_reason_msgs.msg import DetectedTag, Box, ItemModel
+from rc_reason_msgs.msg import DetectedTag, Box, ItemModel, Rectangle
 from shape_msgs.msg import Plane, SolidPrimitive
-from rc_reason_msgs.srv import CalibrateBasePlane, GetBasePlaneCalibration
+from rc_reason_msgs.srv import CadMatchDetectObject, CalibrateBasePlane, GetBasePlaneCalibration
 from rc_reason_msgs.srv import (
     SetLoadCarrier,
     GetLoadCarriers,
@@ -45,6 +45,7 @@ from rc_reason_msgs.srv import (
 from rc_reason_msgs.srv import SetRegionOfInterest3D, GetRegionsOfInterest3D
 from rc_reason_msgs.srv import ComputeGrasps, DetectItems
 from rc_reason_msgs.srv import SilhouetteMatchDetectObject
+from rc_reason_msgs.srv import WarmupTemplate
 
 
 def assert_timestamp(ros_ts, ts):
@@ -91,9 +92,18 @@ def assert_lc(ros_lc, api_lc, timestamp=None, pose_required=True):
     assert ros_lc.id == api_lc["id"]
     assert_primitives(ros_lc.inner_dimensions, api_lc["inner_dimensions"])
     assert_primitives(ros_lc.outer_dimensions, api_lc["outer_dimensions"])
-    assert_primitives(ros_lc.rim_thickness, api_lc["rim_thickness"])
+    if "rim_thickness" in api_lc:
+        assert_primitives(ros_lc.rim_thickness, api_lc["rim_thickness"])
+    if "rim_ledge" in api_lc:
+        assert_primitives(ros_lc.rim_ledge, api_lc["rim_ledge"])
+    if "rim_step_height" in api_lc:
+        assert ros_lc.rim_step_height == api_lc["rim_step_height"]
     if "overfilled" in api_lc:
         assert ros_lc.overfilled == api_lc["overfilled"]
+    if "type" in api_lc:
+        assert ros_lc.type == api_lc["type"]
+    if "height_open_side" in api_lc:
+        assert ros_lc.height_open_side == api_lc["height_open_side"]
 
 
 def assert_suction_grasp(ros_grasp, api_grasp):
@@ -116,6 +126,9 @@ def assert_grasp(ros_grasp, api_grasp):
     assert ros_grasp.id == api_grasp["id"]
     assert ros_grasp.uuid == api_grasp["uuid"]
     assert ros_grasp.match_uuid == api_grasp.get("match_uuid") or api_grasp.get("instance_uuid")
+    assert ros_grasp.collision_checked == api_grasp["collision_checked"]
+    assert ros_grasp.priority == api_grasp["priority"]
+    assert ros_grasp.gripper_id == api_grasp["gripper_id"]
 
 
 def assert_item(ros_item, api_item):
@@ -296,20 +309,35 @@ def test_get_lcs():
     api_res = {
         "load_carriers": [
             {
-                "id": "test",
-                "inner_dimensions": {"x": 0.8, "y": 0.2, "z": 0.8},
-                "outer_dimensions": {"x": 1.0, "y": 0.6, "z": 1.0},
+                "id": "auer_30x20",
+                "type": "STANDARD",
+                "outer_dimensions": {"x": 0.299, "y": 0.202, "z": 0.12},
+                "inner_dimensions": {"x": 0.27, "y": 0.171, "z": 0.115},
+                "rim_thickness": {"x": 0.001, "y": 0.001},
+                "rim_step_height": 0.01,
+                "rim_ledge": {"x": 0.02, "y": 0.02},
+                "height_open_side": 0.03,
+                "pose_frame": "external",
                 "pose": {
-                    "orientation": {"w": 0.0, "x": 0.0, "y": 0.0, "z": 0.0},
-                    "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                    "position": {
+                        "x": -0.214564562644236,
+                        "y": -0.5455132172069047,
+                        "z": 0.6078420015435977,
+                    },
+                    "orientation": {
+                        "x": -0.020007703344687874,
+                        "y": -0.01961561725860953,
+                        "z": 0.7113530365653328,
+                        "w": 0.7022761399447622,
+                    },
                 },
-                "pose_frame": "",
-                "rim_thickness": {"x": 0.0, "y": 0.0},
             }
         ],
         "return_code": {"message": "test", "value": 1234},
     }
-    ros_res = convert_dictionary_to_ros_message(GetLoadCarriers._response_class(), api_res)
+    ros_res = convert_dictionary_to_ros_message(
+        GetLoadCarriers._response_class(), api_res
+    )
     assert_lc(ros_res.load_carriers[0], api_res["load_carriers"][0])
     assert ros_res.return_code.value == api_res["return_code"]["value"]
     assert ros_res.return_code.message == api_res["return_code"]["message"]
@@ -317,18 +345,31 @@ def test_get_lcs():
 
 def test_set_lc():
     ros_req = SetLoadCarrier._request_class()
-    ros_req.load_carrier.id = "mylc"
-    ros_req.load_carrier.inner_dimensions = Box(x=0.8, y=0.2, z=0.8)
-    ros_req.load_carrier.outer_dimensions = Box(x=1.0, y=0.6, z=1.0)
+    ros_lc = ros_req.load_carrier
+    ros_lc.id = "mylc"
+    ros_lc.inner_dimensions = Box(x=0.8, y=0.2, z=0.8)
+    ros_lc.outer_dimensions = Box(x=1.0, y=0.6, z=1.0)
+    ros_lc.rim_ledge = Rectangle(x=1.0, y=1.0)
+    ros_lc.rim_thickness = Rectangle(x=0.01, y=0.01)
+    ros_lc.rim_step_height = 0.05
+    ros_lc.type = "STANDARD"
+    ros_lc.height_open_side = 0.03
+    ros_lc.pose_type = "EXACT_POSE"
     api_req = convert_ros_message_to_dictionary(ros_req)
-    assert_lc(ros_req.load_carrier, api_req["load_carrier"], pose_required=False)
+    api_lc = api_req["load_carrier"]
+    assert_lc(ros_lc, api_lc, pose_required=False)
+    assert_primitives(ros_lc.rim_thickness, api_lc["rim_thickness"])
+    assert_primitives(ros_lc.rim_ledge, api_lc["rim_ledge"])
+    assert ros_lc.rim_step_height == api_lc["rim_step_height"]
+    assert ros_lc.type == api_lc["type"]
+    assert ros_lc.height_open_side == api_lc["height_open_side"]
     # don't send overfilled flag in set_load_carrier
-    assert "overfilled" not in api_req["load_carrier"]
+    assert "overfilled" not in api_lc
     # don't send pose (as prior) if frame_id is not set
-    assert "pose" not in api_req["load_carrier"]
+    assert "pose" not in api_lc
 
     # with prior
-    ros_req.load_carrier.pose.header.frame_id = 'camera'
+    ros_lc.pose.header.frame_id = "camera"
     api_req = convert_ros_message_to_dictionary(ros_req)
     assert_pose(ros_req.load_carrier.pose.pose, api_req["load_carrier"]["pose"])
 
@@ -353,25 +394,29 @@ def test_detect_lcs():
         "timestamp": {"sec": 1581614679, "nsec": 917540309},
         "load_carriers": [
             {
+                "id": "auer_30x20",
+                "type": "STANDARD",
+                "outer_dimensions": {"x": 0.299, "y": 0.202, "z": 0.12},
+                "inner_dimensions": {"x": 0.27, "y": 0.171, "z": 0.115},
+                "rim_thickness": {"x": 0, "y": 0},
+                "rim_step_height": 0,
+                "rim_ledge": {"x": 0, "y": 0},
+                "height_open_side": 0,
+                "pose_frame": "external",
                 "pose": {
                     "position": {
-                        "y": -0.01687562098439693,
-                        "x": 0.11888062561732585,
-                        "z": 0.8873076959237803,
+                        "x": -0.214564562644236,
+                        "y": -0.5455132172069047,
+                        "z": 0.6078420015435977,
                     },
                     "orientation": {
-                        "y": -0.046329159479736336,
-                        "x": 0.9986625754609102,
-                        "z": 0.006671112421383355,
-                        "w": 0.021958331489780644,
+                        "x": -0.020007703344687874,
+                        "y": -0.01961561725860953,
+                        "z": 0.7113530365653328,
+                        "w": 0.7022761399447622,
                     },
                 },
-                "pose_frame": "camera",
-                "inner_dimensions": {"y": 0.27, "x": 0.37, "z": 0.14},
-                "outer_dimensions": {"y": 0.3, "x": 0.4, "z": 0.2},
-                "overfilled": True,
-                "rim_thickness": {"y": 0.0, "x": 0.0},
-                "id": "test",
+                "overfilled": False,
             }
         ],
         "return_code": {"message": "foo", "value": 123},
@@ -842,12 +887,14 @@ def test_silhouettematch_detect_object():
     ros_req.object_to_detect.object_id = "foo_template"
     ros_req.object_to_detect.region_of_interest_2d_id = "bar_roi"
     ros_req.offset = 0.1
+    ros_req.object_plane_detection = True
 
     api_req = convert_ros_message_to_dictionary(ros_req)
     assert ros_req.pose_frame == api_req["pose_frame"]
     assert ros_req.object_to_detect.object_id == api_req["object_to_detect"]["object_id"]
     assert ros_req.object_to_detect.region_of_interest_2d_id == api_req["object_to_detect"]["region_of_interest_2d_id"]
     assert ros_req.offset == api_req["offset"]
+    assert ros_req.object_plane_detection == api_req["object_plane_detection"]
 
     # don't send robot_pose if pose_frame is camera
     assert "robot_pose" not in api_req
@@ -860,139 +907,175 @@ def test_silhouettematch_detect_object():
     assert_pose(ros_req.robot_pose, api_req["robot_pose"])
 
     api_res = {
-        "timestamp": {"sec": 1587035449, "nsec": 321465164},
-        "return_code": {"message": "abcdef", "value": 1234},
-        "load_carriers": [
-            {
-                "pose": {
-                    "position": {
-                        "y": -0.0168824336375496,
-                        "x": 0.1189406043995812,
-                        "z": 0.8875302697155399,
-                    },
-                    "orientation": {
-                        "y": -0.04632486703729271,
-                        "x": 0.998664879978751,
-                        "z": 0.006342615882086765,
-                        "w": 0.02195985184108778,
-                    },
-                },
-                "pose_frame": "camera",
-                "inner_dimensions": {"y": 0.27, "x": 0.37, "z": 0.14},
-                "outer_dimensions": {"y": 0.3, "x": 0.4, "z": 0.2},
-                "overfilled": True,
-                "rim_thickness": {"y": 0.0, "x": 0.0},
-                "id": "xyz",
-            }
-        ],
-        "object_id": "foo_template",
         "grasps": [
             {
-                "instance_uuid": "666ab9d5-613d-4ab5-8150-e0f57bc64f0b",
-                "uuid": "8566591f-a973-48dc-868d-d88dd36b1c2f",
-                "pose_frame": "camera",
-                "timestamp": {
-                    "sec": 1618242033,
-                    "nsec": 580367964
-                },
+                "collision_checked": True,
+                "gripper_id": "TechCheckSuction",
+                "id": "grasp1",
+                "instance_uuid": "a0d25d4f-b4bc-433d-ba9d-0181ea009a9f",
                 "pose": {
-                "position": {
-                    "y": -0.10296900579068122,
-                    "x": -0.0266098059453003,
-                    "z": 0.7429549952451179
+                    "orientation": {
+                        "w": 0.02794009129734266,
+                        "x": 0.16302872608510197,
+                        "y": 0.9861740842815279,
+                        "z": 0.010083707842648327,
+                    },
+                    "position": {
+                        "x": -0.1353075277781327,
+                        "y": -0.5694874275702877,
+                        "z": 0.37502640511106955,
+                    },
                 },
-                "orientation": {
-                    "y": -0.03440297300901497,
-                    "x": -0.0521801300739437,
-                    "z": -0.5059767984782052,
-                    "w": 0.86027969223698
-                }
-                },
-                "id": "grasp1"
+                "pose_frame": "external",
+                "priority": 0,
+                "timestamp": {"nsec": 616459450, "sec": 1698650417},
+                "uuid": "9f2f367b-5ed6-4be5-ab4a-57459849a107",
             },
             {
-                "instance_uuid": "666ab9d5-613d-4ab5-8150-e0f57bc64f0b",
-                "uuid": "032d85c9-897f-45bc-b6c0-962c72d77ff5",
-                "pose_frame": "camera",
-                "timestamp": {
-                    "sec": 1618242033,
-                    "nsec": 580367964
-                },
+                "collision_checked": True,
+                "gripper_id": "TechCheckSuction",
+                "id": "grasp1",
+                "instance_uuid": "36851c6a-ba2d-4f44-9f9d-49da1d871b4d",
                 "pose": {
-                "position": {
-                    "y": -0.12056604440014489,
-                    "x": -0.017118856731590644,
-                    "z": 0.74522584119423
+                    "orientation": {
+                        "w": 0.024526127621784875,
+                        "x": 0.4047130846426316,
+                        "y": 0.9139611639229318,
+                        "z": 0.0167570560589395,
+                    },
+                    "position": {
+                        "x": -0.17861663173329734,
+                        "y": -0.727052491401777,
+                        "z": 0.3707915610089313,
+                    },
                 },
-                "orientation": {
-                    "y": 0.0521801300739437,
-                    "x": -0.03440297300901496,
-                    "z": 0.8602796922369801,
-                    "w": 0.5059767984782052
-                }
+                "pose_frame": "external",
+                "priority": 0,
+                "timestamp": {"nsec": 616459450, "sec": 1698650417},
+                "uuid": "736e54c5-d5d3-45b3-9e9f-d2778ba47d0e",
+            },
+            {
+                "collision_checked": True,
+                "gripper_id": "TechCheckSuction",
+                "id": "grasp1",
+                "instance_uuid": "e56ed154-7e9c-43ce-ac98-95ec4a60bffd",
+                "pose": {
+                    "orientation": {
+                        "w": -0.016290541508000696,
+                        "x": 0.9214466391074757,
+                        "y": -0.38736775978070503,
+                        "z": 0.02483844039777972,
+                    },
+                    "position": {
+                        "x": -0.21705885963679145,
+                        "y": -0.6031308349885743,
+                        "z": 0.3698807929315068,
+                    },
                 },
-                "id": "grasp1"
-            }
+                "pose_frame": "external",
+                "priority": 0,
+                "timestamp": {"nsec": 616459450, "sec": 1698650417},
+                "uuid": "789b5b57-c367-4a62-955a-66eee4f2dc6c",
+            },
         ],
         "instances": [
             {
-                "uuid": "666ab9d5-613d-4ab5-8150-e0f57bc64f0b",
-                "pose_frame": "camera",
-                "timestamp": {
-                    "sec": 1605085203,
-                    "nsec": 437828567
-                },
+                "grasp_uuids": ["9f2f367b-5ed6-4be5-ab4a-57459849a107"],
+                "object_id": "autoliv",
                 "pose": {
-                "position": {
-                    "y": -0.030490136926486944,
-                    "x": 0.11629137366368486,
-                    "z": 0.750721261686269
+                    "orientation": {
+                        "w": 0.012626369409181892,
+                        "x": 0.8126091001635014,
+                        "y": 0.5820516646975376,
+                        "z": 0.026886886514550914,
+                    },
+                    "position": {
+                        "x": -0.15254375827394828,
+                        "y": -0.5637196368684477,
+                        "z": 0.37408038636589447,
+                    },
                 },
-                "orientation": {
-                    "y": 0.00888023218635928,
-                    "x": 0.01306525525093437,
-                    "z": 0.2290564806473834,
-                    "w": 0.973284937341054
-                }
-                },
-                "object_id": "foo_template",
-                "grasp_uuids": [
-                    "8566591f-a973-48dc-868d-d88dd36b1c2f",
-                    "032d85c9-897f-45bc-b6c0-962c72d77ff5"
-                ],
-                "id": "666ab9d5-613d-4ab5-8150-e0f57bc64f0b"
+                "pose_frame": "external",
+                "timestamp": {"nsec": 616459450, "sec": 1698650417},
+                "uuid": "a0d25d4f-b4bc-433d-ba9d-0181ea009a9f",
             },
             {
-                "uuid": "1b9a8b0d-1add-4c2b-81e7-240a21ec65c5",
-                "pose_frame": "camera",
-                "timestamp": {
-                    "sec": 1605085203,
-                    "nsec": 437828567
-                },
+                "grasp_uuids": ["736e54c5-d5d3-45b3-9e9f-d2778ba47d0e"],
+                "object_id": "autoliv",
                 "pose": {
-                "position": {
-                    "y": 0.10677343069137911,
-                    "x": 0.021505663098054306,
-                    "z": 0.7558621572235659
+                    "orientation": {
+                        "w": 0.0054935627343169835,
+                        "x": 0.9324435033313255,
+                        "y": 0.36009277017835184,
+                        "z": 0.029191619300477294,
+                    },
+                    "position": {
+                        "x": -0.19090657875605033,
+                        "y": -0.7136406462335256,
+                        "z": 0.3702174304913096,
+                    },
                 },
-                "orientation": {
-                    "y": 0.010262094705195637,
-                    "x": 0.012010363471490575,
-                    "z": 0.12072303580908399,
-                    "w": 0.9925605216844882
-                }
+                "pose_frame": "external",
+                "timestamp": {"nsec": 616459450, "sec": 1698650417},
+                "uuid": "36851c6a-ba2d-4f44-9f9d-49da1d871b4d",
+            },
+            {
+                "grasp_uuids": ["789b5b57-c367-4a62-955a-66eee4f2dc6c"],
+                "object_id": "autoliv",
+                "pose": {
+                    "orientation": {
+                        "w": 0.029082582188134216,
+                        "x": -0.3776507972735024,
+                        "y": 0.9254715367630162,
+                        "z": -0.006044276822168698,
+                    },
+                    "position": {
+                        "x": -0.20427196725902516,
+                        "y": -0.6160681970924207,
+                        "z": 0.37048911735903367,
+                    },
                 },
-                "object_id": "foo_template",
-                "grasp_uuids": [],
-                "id": "1b9a8b0d-1add-4c2b-81e7-240a21ec65c5"
+                "pose_frame": "external",
+                "timestamp": {"nsec": 616459450, "sec": 1698650417},
+                "uuid": "e56ed154-7e9c-43ce-ac98-95ec4a60bffd",
+            },
+        ],
+        "load_carriers": [
+            {
+                "id": "auer_30x20",
+                "inner_dimensions": {"x": 0.272, "y": 0.169, "z": 0.115},
+                "outer_dimensions": {"x": 0.302, "y": 0.199, "z": 0.12},
+                "overfilled": False,
+                "pose": {
+                    "orientation": {
+                        "w": 0.7057304282875666,
+                        "x": -0.015748978772412953,
+                        "y": -0.02462666322685686,
+                        "z": 0.7078771501574163,
+                    },
+                    "position": {
+                        "x": -0.1774140351737496,
+                        "y": -0.6345544296050158,
+                        "z": 0.4257804506380972,
+                    },
+                },
+                "pose_frame": "external",
+                "type": "STANDARD",
             }
-        ]
+        ],
+        "object_id": "autoliv",
+        "return_code": {
+            "message": "Collision check is disabled for the base plane",
+            "value": 999,
+        },
+        "timestamp": {"nsec": 616459450, "sec": 1698650417},
     }
     ros_res = convert_dictionary_to_ros_message(SilhouetteMatchDetectObject._response_class(), api_res)
     ros_lc = ros_res.load_carriers[0]
     api_lc = api_res["load_carriers"][0]
     assert_lc(ros_lc, api_lc, api_res["timestamp"])
     assert ros_lc.overfilled == api_lc["overfilled"]
+    assert ros_res.object_id == api_res["object_id"]
     for i, ros_match in enumerate(ros_res.matches):
         api_match = api_res["instances"][i]
         assert_match(ros_match, api_match)
@@ -1000,3 +1083,160 @@ def test_silhouettematch_detect_object():
         api_grasp = api_res["grasps"][i]
         assert_grasp(ros_grasp, api_grasp)
 
+def test_warmup_template():
+    ros_req = WarmupTemplate._request_class()
+    ros_req.template_id = "SCS10UU"
+
+    api_req = convert_ros_message_to_dictionary(ros_req)
+    assert ros_req.template_id == api_req["template_id"]
+
+    api_res = {
+            "return_code": {"message": "abcdef", "value": 1234},
+            }
+    ros_res = convert_dictionary_to_ros_message(WarmupTemplate._response_class(), api_res)
+    assert ros_res.return_code.value == 1234
+    assert ros_res.return_code.message == "abcdef"
+
+def test_cadmatch_detect_object():
+    ros_req = CadMatchDetectObject._request_class()
+    ros_req.pose_frame = "camera"
+    ros_req.template_id = "SCS10UU"
+    ros_req.region_of_interest_id = "test_roi"
+    ros_req.load_carrier_id = "auer_30x20"
+    ros_req.collision_detection.gripper_id = "TechCheckSuction"
+    ros_req.data_acquisition_mode = "USE_LAST"
+    pose_prior_ids = ['pr1', 'pr2', 'pr3']
+    ros_req.pose_prior_ids = pose_prior_ids
+
+    api_req = convert_ros_message_to_dictionary(ros_req)
+    assert ros_req.pose_frame == api_req["pose_frame"]
+    assert ros_req.template_id == api_req["template_id"]
+    assert ros_req.region_of_interest_id == api_req["region_of_interest_id"]
+    assert ros_req.load_carrier_id == api_req["load_carrier_id"]
+    assert ros_req.collision_detection.gripper_id == api_req["collision_detection"]["gripper_id"]
+    assert ros_req.data_acquisition_mode == api_req["data_acquisition_mode"]
+    for idx, pose_prior_id in enumerate(api_req["pose_prior_ids"]):
+        assert pose_prior_id == pose_prior_ids[idx]
+
+    # don't send robot_pose if pose_frame is camera
+    assert "robot_pose" not in api_req
+
+    ros_req.pose_frame = "external"
+    ros_req.robot_pose.position.y = 1.0
+    ros_req.robot_pose.orientation.z = 1.0
+    api_req = convert_ros_message_to_dictionary(ros_req)
+    assert "robot_pose" in api_req
+    assert_pose(ros_req.robot_pose, api_req["robot_pose"])
+
+    api_res = {
+        "grasps": [
+            {
+                "collision_checked": True,
+                "gripper_id": "TechCheckSuction",
+                "id": "grasp_002",
+                "match_uuid": "0d63d837-873e-4f9b-bb33-8ffc82a4a188",
+                "pose": {
+                    "orientation": {
+                        "w": 0.031536247095192184,
+                        "x": -0.7037414484758171,
+                        "y": 0.7085975729486148,
+                        "z": -0.040550970423012866,
+                    },
+                    "position": {
+                        "x": -0.20713979463858267,
+                        "y": -0.6762636023331606,
+                        "z": 0.3940163720926003,
+                    },
+                },
+                "pose_frame": "external",
+                "priority": 0,
+                "timestamp": {"nsec": 460278496, "sec": 1698250184},
+                "uuid": "48ff8b39-716f-46e2-b7fc-4749a2cfbd85",
+            },
+            {
+                "collision_checked": True,
+                "gripper_id": "TechCheckSuction",
+                "id": "grasp_001",
+                "match_uuid": "3257fe23-4eaf-4980-9387-da3a06aa8191",
+                "pose": {
+                    "orientation": {
+                        "w": 0.0005472466626210551,
+                        "x": 0.1431851793676901,
+                        "y": 0.9894733928268222,
+                        "z": 0.021016754642145148,
+                    },
+                    "position": {
+                        "x": -0.15182214051920698,
+                        "y": -0.5801117504611094,
+                        "z": 0.3985970994769714,
+                    },
+                },
+                "pose_frame": "external",
+                "priority": 0,
+                "timestamp": {"nsec": 460278496, "sec": 1698250184},
+                "uuid": "acd6c88a-5006-47ca-afb9-9ab72121f379",
+            },
+        ],
+        "load_carriers": [
+            {
+                "id": "auer_30x20",
+                "inner_dimensions": {"x": 0.27, "y": 0.168, "z": 0.115},
+                "outer_dimensions": {"x": 0.3, "y": 0.198, "z": 0.12},
+                "overfilled": False,
+                "pose": {
+                    "orientation": {
+                        "w": 0.680437150558907,
+                        "x": -0.017921143014554285,
+                        "y": -0.021368913730768414,
+                        "z": 0.7322755535304277,
+                    },
+                    "position": {
+                        "x": -0.19125850163271382,
+                        "y": -0.5699870371867495,
+                        "z": 0.4263954531190711,
+                    },
+                },
+                "pose_frame": "external",
+                "type": "STANDARD",
+            }
+        ],
+        "matches": [
+            {
+                "grasp_uuids": [],
+                "pose": {
+                    "orientation": {
+                        "w": 0.49602686279049146,
+                        "x": 0.5317248734069521,
+                        "y": -0.47378883955919815,
+                        "z": -0.49674265200660933,
+                    },
+                    "position": {
+                        "x": -0.20658978344330306,
+                        "y": -0.4573747467344652,
+                        "z": 0.38430667156448584,
+                    },
+                },
+                "pose_frame": "external",
+                "score": 0.9099392294883728,
+                "template_id": "SCS10UU",
+                "timestamp": {"nsec": 460278496, "sec": 1698250184},
+                "uuid": "1ac6e86c-f199-4e7f-ac60-10cab452b4eb",
+            }
+        ],
+        "return_code": {
+            "message": "Please manually start the node for maximum performance.",
+            "value": 999,
+        },
+        "timestamp": {"nsec": 460278496, "sec": 1698250184},
+    }
+    ros_res = convert_dictionary_to_ros_message(CadMatchDetectObject._response_class(), api_res)
+    ros_lc = ros_res.load_carriers[0]
+    api_lc = api_res["load_carriers"][0]
+    assert_lc(ros_lc, api_lc, api_res["timestamp"])
+    assert ros_lc.overfilled == api_lc["overfilled"]
+    for i, ros_match in enumerate(ros_res.matches):
+        api_match = api_res["matches"][i]
+        assert_match(ros_match, api_match)
+    for i, ros_grasp in enumerate(ros_res.grasps):
+        api_grasp = api_res["grasps"][i]
+        assert_grasp(ros_grasp, api_grasp)
