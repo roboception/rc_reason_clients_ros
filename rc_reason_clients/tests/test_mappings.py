@@ -34,7 +34,7 @@ from rc_reason_clients.message_converter import (
 )
 from rc_reason_msgs.msg import DetectedTag, Box, ItemModel, Rectangle
 from shape_msgs.msg import Plane, SolidPrimitive
-from rc_reason_msgs.srv import CadMatchDetectObject, CalibrateBasePlane, GetBasePlaneCalibration
+from rc_reason_msgs.srv import CalibrateBasePlane, GetBasePlaneCalibration
 from rc_reason_msgs.srv import (
     SetLoadCarrier,
     GetLoadCarriers,
@@ -46,6 +46,7 @@ from rc_reason_msgs.srv import SetRegionOfInterest3D, GetRegionsOfInterest3D
 from rc_reason_msgs.srv import ComputeGrasps, DetectItems
 from rc_reason_msgs.srv import SilhouetteMatchDetectObject
 from rc_reason_msgs.srv import WarmupTemplate
+from rc_reason_msgs.srv import CadMatchDetectObject
 
 
 def assert_timestamp(ros_ts, ts):
@@ -309,7 +310,7 @@ def test_get_lcs():
     api_res = {
         "load_carriers": [
             {
-                "id": "auer_30x20",
+                "id": "foo_lc",
                 "type": "STANDARD",
                 "outer_dimensions": {"x": 0.299, "y": 0.202, "z": 0.12},
                 "inner_dimensions": {"x": 0.27, "y": 0.171, "z": 0.115},
@@ -394,14 +395,14 @@ def test_detect_lcs():
         "timestamp": {"sec": 1581614679, "nsec": 917540309},
         "load_carriers": [
             {
-                "id": "auer_30x20",
+                "id": "foo_lc",
                 "type": "STANDARD",
                 "outer_dimensions": {"x": 0.299, "y": 0.202, "z": 0.12},
                 "inner_dimensions": {"x": 0.27, "y": 0.171, "z": 0.115},
-                "rim_thickness": {"x": 0, "y": 0},
-                "rim_step_height": 0,
-                "rim_ledge": {"x": 0, "y": 0},
-                "height_open_side": 0,
+                "rim_thickness": {"x": 0.0, "y": 0.0},
+                "rim_step_height": 0.0,
+                "rim_ledge": {"x": 0.0, "y": 0.0},
+                "height_open_side": 0.0,
                 "pose_frame": "external",
                 "pose": {
                     "position": {
@@ -910,7 +911,7 @@ def test_silhouettematch_detect_object():
         "grasps": [
             {
                 "collision_checked": True,
-                "gripper_id": "TechCheckSuction",
+                "gripper_id": "foo_gripper",
                 "id": "grasp1",
                 "instance_uuid": "a0d25d4f-b4bc-433d-ba9d-0181ea009a9f",
                 "pose": {
@@ -933,7 +934,7 @@ def test_silhouettematch_detect_object():
             },
             {
                 "collision_checked": True,
-                "gripper_id": "TechCheckSuction",
+                "gripper_id": "foo_gripper",
                 "id": "grasp1",
                 "instance_uuid": "36851c6a-ba2d-4f44-9f9d-49da1d871b4d",
                 "pose": {
@@ -956,7 +957,7 @@ def test_silhouettematch_detect_object():
             },
             {
                 "collision_checked": True,
-                "gripper_id": "TechCheckSuction",
+                "gripper_id": "foo_gripper",
                 "id": "grasp1",
                 "instance_uuid": "e56ed154-7e9c-43ce-ac98-95ec4a60bffd",
                 "pose": {
@@ -981,7 +982,7 @@ def test_silhouettematch_detect_object():
         "instances": [
             {
                 "grasp_uuids": ["9f2f367b-5ed6-4be5-ab4a-57459849a107"],
-                "object_id": "autoliv",
+                "object_id": "foo_template",
                 "pose": {
                     "orientation": {
                         "w": 0.012626369409181892,
@@ -1001,7 +1002,7 @@ def test_silhouettematch_detect_object():
             },
             {
                 "grasp_uuids": ["736e54c5-d5d3-45b3-9e9f-d2778ba47d0e"],
-                "object_id": "autoliv",
+                "object_id": "foo_template",
                 "pose": {
                     "orientation": {
                         "w": 0.0054935627343169835,
@@ -1021,7 +1022,7 @@ def test_silhouettematch_detect_object():
             },
             {
                 "grasp_uuids": ["789b5b57-c367-4a62-955a-66eee4f2dc6c"],
-                "object_id": "autoliv",
+                "object_id": "foo_template",
                 "pose": {
                     "orientation": {
                         "w": 0.029082582188134216,
@@ -1042,7 +1043,7 @@ def test_silhouettematch_detect_object():
         ],
         "load_carriers": [
             {
-                "id": "auer_30x20",
+                "id": "foo_lc",
                 "inner_dimensions": {"x": 0.272, "y": 0.169, "z": 0.115},
                 "outer_dimensions": {"x": 0.302, "y": 0.199, "z": 0.12},
                 "overfilled": False,
@@ -1063,7 +1064,7 @@ def test_silhouettematch_detect_object():
                 "type": "STANDARD",
             }
         ],
-        "object_id": "autoliv",
+        "object_id": "foo_template",
         "return_code": {
             "message": "Collision check is disabled for the base plane",
             "value": 999,
@@ -1085,7 +1086,7 @@ def test_silhouettematch_detect_object():
 
 def test_warmup_template():
     ros_req = WarmupTemplate._request_class()
-    ros_req.template_id = "SCS10UU"
+    ros_req.template_id = "foo_template"
 
     api_req = convert_ros_message_to_dictionary(ros_req)
     assert ros_req.template_id == api_req["template_id"]
@@ -1100,10 +1101,10 @@ def test_warmup_template():
 def test_cadmatch_detect_object():
     ros_req = CadMatchDetectObject._request_class()
     ros_req.pose_frame = "camera"
-    ros_req.template_id = "SCS10UU"
+    ros_req.template_id = "foo_template"
     ros_req.region_of_interest_id = "test_roi"
-    ros_req.load_carrier_id = "auer_30x20"
-    ros_req.collision_detection.gripper_id = "TechCheckSuction"
+    ros_req.load_carrier_id = "foo_lc"
+    ros_req.collision_detection.gripper_id = "foo_gripper"
     ros_req.data_acquisition_mode = "USE_LAST"
     pose_prior_ids = ['pr1', 'pr2', 'pr3']
     ros_req.pose_prior_ids = pose_prior_ids
@@ -1132,7 +1133,7 @@ def test_cadmatch_detect_object():
         "grasps": [
             {
                 "collision_checked": True,
-                "gripper_id": "TechCheckSuction",
+                "gripper_id": "foo_gripper",
                 "id": "grasp_002",
                 "match_uuid": "0d63d837-873e-4f9b-bb33-8ffc82a4a188",
                 "pose": {
@@ -1155,7 +1156,7 @@ def test_cadmatch_detect_object():
             },
             {
                 "collision_checked": True,
-                "gripper_id": "TechCheckSuction",
+                "gripper_id": "foo_gripper",
                 "id": "grasp_001",
                 "match_uuid": "3257fe23-4eaf-4980-9387-da3a06aa8191",
                 "pose": {
@@ -1179,7 +1180,7 @@ def test_cadmatch_detect_object():
         ],
         "load_carriers": [
             {
-                "id": "auer_30x20",
+                "id": "foo_lc",
                 "inner_dimensions": {"x": 0.27, "y": 0.168, "z": 0.115},
                 "outer_dimensions": {"x": 0.3, "y": 0.198, "z": 0.12},
                 "overfilled": False,
@@ -1218,7 +1219,7 @@ def test_cadmatch_detect_object():
                 },
                 "pose_frame": "external",
                 "score": 0.9099392294883728,
-                "template_id": "SCS10UU",
+                "template_id": "foo_template",
                 "timestamp": {"nsec": 460278496, "sec": 1698250184},
                 "uuid": "1ac6e86c-f199-4e7f-ac60-10cab452b4eb",
             }
