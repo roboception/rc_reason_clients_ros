@@ -21,18 +21,6 @@ stages:
 #########################
 # Templates using anchors
 #########################
-.amd64_bionic_t: &amd64_bionic_job
-  image: ros:melodic-perception
-  tags:
-    - amd64
-    - docker
-
-.armhf_bionic_t: &armhf_bionic_job
-  image: registry.roboception.de/tools/docker_images:armhf-melodic-perception
-  tags:
-    - armhf
-    - docker
-
 .amd64_focal_t: &amd64_focal_job
   image: ros:noetic-perception
   tags:
@@ -48,8 +36,8 @@ stages:
     - dpkg -i ./rc_reason_msgs/build/*~${DISTRO_CODENAME}_${DEB_ARCH}.deb || true
     - apt-get -f -y install
     - cd rc_reason_clients
-    - if [ "$ROS_PYTHON_VERSION" = "3" ]; then apt-get install -y python3-pytest; else apt-get install -y python-pytest; fi
-    - python${ROS_PYTHON_VERSION} -m pytest -s -vvv
+    - apt-get install -y python3-pytest
+    - python3 -m pytest -s -vvv
 
 # Debian packaging
 .package:
@@ -99,29 +87,12 @@ stages:
 ##############
 #### Jobs ####
 ##############
-
-build_msgs:bionic:amd64:
-  <<: *amd64_bionic_job
-  extends: .build_msgs
-
-build_msgs:bionic:armhf:
-  <<: *armhf_bionic_job
-  extends: .build_msgs
-
 build_msgs:focal:amd64:
   <<: *amd64_focal_job
   extends: .build_msgs
 
 # Test clients with previously build msgs (on every commit)
 ###########################################################
-test:bionic:amd64:
-  <<: *amd64_bionic_job
-  extends: .test
-
-test:bionic:armhf:
-  <<: *armhf_bionic_job
-  extends: .test
-
 test:focal:amd64:
   <<: *amd64_focal_job
   extends: .test
@@ -130,15 +101,6 @@ test:focal:amd64:
 # package and upload for testing
 # (only on master)
 ################################
-
-package_testing:bionic:amd64:
-  <<: *amd64_bionic_job
-  extends: .package_testing
-
-package_testing:bionic:armhf:
-  <<: *armhf_bionic_job
-  extends: .package_testing
-
 package_testing:focal:amd64:
   <<: *amd64_focal_job
   extends: .package_testing
@@ -147,14 +109,6 @@ package_testing:focal:amd64:
 # package and upload for stable
 # (only for releases, version tags)
 ###################################
-package_stable:bionic:amd64:
-  <<: *amd64_bionic_job
-  extends: .package_stable
-
-package_stable:bionic:armhf:
-  <<: *armhf_bionic_job
-  extends: .package_stable
-
 package_stable:focal:amd64:
   <<: *amd64_focal_job
   extends: .package_stable
