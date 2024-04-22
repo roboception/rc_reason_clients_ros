@@ -26,12 +26,12 @@ Running
 
 The parameters and services of each client have the same names as in the REST-API (see [documentation](https://doc.rc-visard.com)).
 
-Additionally every client has a `host` parameter which needs to be set to the IP address or hostname of the device (e.g. rc_visard).
+Additionally every client has a `host` parameter which needs to be set to the IP address or hostname of the device (i.e. rc_cube or rc_visard) and a `pipeline` parameter which defaults to 0.
 
-Example:
+Example to run the april tag detection client for pipeline 1:
 
 ```
-rosrun rc_reason_clients rc_april_tag_detect_client _host:=10.0.2.40
+rosrun rc_reason_clients rc_april_tag_detect_client _host:=10.0.2.40 _pipeline:=1
 ```
 
 rc_april_tag_detect_client and rc_qr_code_detect_client

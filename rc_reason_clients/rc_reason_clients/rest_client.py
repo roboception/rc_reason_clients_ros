@@ -82,11 +82,15 @@ class RestClient(object):
             rospy.logerr('host is not set')
             sys.exit(1)
 
+        self.pipeline = rospy.get_param('~pipeline', 0)
+
+        self.api_node_prefix = 'http://{}/api/v2/pipelines/{}/nodes/{}'.format(self.host, self.pipeline, self.rest_name)
+
         self._setup_ddr()
 
     def _get_rest_parameters(self):
         try:
-            url = 'http://{}/api/v1/nodes/{}/parameters'.format(self.host, self.rest_name)
+            url = '{}/parameters'.format(self.api_node_prefix)
             res = requests_retry_session().get(url)
             if res.status_code != 200:
                 rospy.logerr("Getting parameters failed with status code: %d", res.status_code)
@@ -98,7 +102,7 @@ class RestClient(object):
 
     def _set_rest_parameters(self, parameters):
         try:
-            url = 'http://{}/api/v1/nodes/{}/parameters'.format(self.host, self.rest_name)
+            url = '{}/parameters'.format(self.api_node_prefix)
             res = requests_retry_session().put(url, json=parameters)
             j = res.json()
             rospy.logdebug("set parameters response: %s", json.dumps(j, indent=2))
@@ -163,7 +167,7 @@ class RestClient(object):
                 args = convert_ros_message_to_dictionary(request)
                 rospy.logdebug('calling {} with args: {}'.format(name, args))
 
-            url = 'http://{}/api/v1/nodes/{}/services/{}'.format(self.host, self.rest_name, name)
+            url = '{}/services/{}'.format(self.api_node_prefix, name)
             res = requests_retry_session().put(url, json={'args': args})
 
             j = res.json()
